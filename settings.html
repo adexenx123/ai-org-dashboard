@@ -92,6 +92,56 @@
   .model-card .agent-name .icon { font-size: 16px; }
   .model-card .cost { font-size: 11.5px; color: var(--muted); margin-top: 4px; }
 
+  .server-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12.5px;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--muted);
+    box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.15);
+  }
+  .status-dot.ok {
+    background: var(--ok);
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.15);
+  }
+  .status-dot.danger {
+    background: var(--danger);
+    box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.15);
+  }
+  .settings-summary {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .summary-item {
+    background: var(--panel-2);
+    border: 1px solid var(--border-soft);
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+  .summary-item .value {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .summary-item .name {
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .btn.loading {
+    opacity: 0.7;
+    pointer-events: none;
+  }
+
   .budget-input { display: flex; gap: 8px; align-items: center; }
   .budget-input input { width: 100px; text-align: right; }
 
@@ -106,6 +156,9 @@
   @media (max-width: 900px) {
     .settings-layout { grid-template-columns: 1fr; }
     .settings-nav { position: static; }
+    .setting-row { align-items: flex-start; flex-direction: column; }
+    .settings-summary { grid-template-columns: 1fr; }
+    .server-status { white-space: normal; }
   }
 </style>
 </head>
@@ -143,6 +196,17 @@
           <input type="text" value="StarMaps" class="control">
         </div>
         <div class="setting-row">
+          <div class="info">
+            <div class="label">Server 連線</div>
+            <div class="hint" id="settings-api-base">API: 載入中</div>
+          </div>
+          <div class="server-status control" aria-live="polite">
+            <span class="status-dot" id="settings-health-dot"></span>
+            <span id="settings-health-text">檢查中</span>
+            <button class="btn" id="settings-refresh" type="button">重新整理</button>
+          </div>
+        </div>
+        <div class="setting-row">
           <div class="info"><div class="label">CEO Email</div><div class="hint">接收批准請求與緊急通知</div></div>
           <input type="text" value="jubileecreator@gmail.com" class="control" style="min-width:240px">
         </div>
@@ -163,6 +227,20 @@
       <div class="settings-section" id="s-agents">
         <h2>🤖 AI 員工配置 <span class="en">Agent Configuration</span></h2>
         <div class="section-desc">選擇每個角色使用的模型。可以省成本（用 Haiku）或拼能力（用 Opus）</div>
+        <div class="settings-summary" aria-live="polite">
+          <div class="summary-item">
+            <div class="value" id="settings-agent-total">--</div>
+            <div class="name">角色總數</div>
+          </div>
+          <div class="summary-item">
+            <div class="value" id="settings-engine-summary">--</div>
+            <div class="name">引擎分佈</div>
+          </div>
+          <div class="summary-item">
+            <div class="value" id="settings-manifest-version">--</div>
+            <div class="name">manifest version</div>
+          </div>
+        </div>
 
         <div class="model-card">
           <div class="head">
@@ -382,6 +460,124 @@
   function toggle(el) {
     el.classList.toggle('on');
   }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const DEFAULT_API_BASE = 'http://127.0.0.1:8765';
+    const params = new URLSearchParams(window.location.search);
+    const apiOverride = params.get('api');
+    const apiBase = (apiOverride || DEFAULT_API_BASE).replace(/\/+$/, '');
+    const els = {
+      apiBase: document.getElementById('settings-api-base'),
+      healthDot: document.getElementById('settings-health-dot'),
+      healthText: document.getElementById('settings-health-text'),
+      refresh: document.getElementById('settings-refresh'),
+      agentTotal: document.getElementById('settings-agent-total'),
+      engineSummary: document.getElementById('settings-engine-summary'),
+      manifestVersion: document.getElementById('settings-manifest-version'),
+    };
+
+    function setHealth(state, text) {
+      els.healthDot.className = `status-dot ${state}`;
+      els.healthText.textContent = text;
+    }
+
+    function showFetchError(message) {
+      if (typeof showToast === 'function') {
+        showToast('⚠️', message, true);
+      }
+    }
+
+    function urlFor(path) {
+      return `${apiBase}${path}`;
+    }
+
+    async function readJson(path, label) {
+      const response = await fetch(urlFor(path), {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+      });
+      if (!response.ok) {
+        throw new Error(`${label} HTTP ${response.status}`);
+      }
+      return response.json();
+    }
+
+    function getManifest(payload) {
+      return payload && payload.manifest ? payload.manifest : payload;
+    }
+
+    function normalizeRoles(payload) {
+      const manifest = getManifest(payload);
+      const roles = manifest && manifest.roles ? manifest.roles : manifest;
+      if (!roles) return [];
+      if (Array.isArray(roles)) return roles;
+      return Object.entries(roles).map(([key, role]) => ({ id: key, ...role }));
+    }
+
+    function getEngine(role) {
+      return String(role.engine || role.model || role.runtime || '').toLowerCase();
+    }
+
+    function getManifestVersion(payload) {
+      const manifest = getManifest(payload);
+      return (
+        payload?.manifest_version ||
+        payload?.manifestVersion ||
+        payload?.version ||
+        manifest?.manifest_version ||
+        manifest?.manifestVersion ||
+        manifest?.version ||
+        '未提供'
+      );
+    }
+
+    function renderAgents(payload) {
+      const roles = normalizeRoles(payload);
+      const counts = roles.reduce((acc, role) => {
+        const engine = getEngine(role);
+        if (engine.includes('claude')) acc.claude += 1;
+        else if (engine.includes('codex') || engine.includes('gpt')) acc.codex += 1;
+        else acc.other += 1;
+        return acc;
+      }, { claude: 0, codex: 0, other: 0 });
+      const summary = [`claude ${counts.claude}`, `codex ${counts.codex}`];
+      if (counts.other) summary.push(`其他 ${counts.other}`);
+
+      els.agentTotal.textContent = String(roles.length);
+      els.engineSummary.textContent = summary.join(' / ');
+      els.manifestVersion.textContent = String(getManifestVersion(payload));
+    }
+
+    async function refreshSettingsStatus() {
+      els.refresh.classList.add('loading');
+      els.refresh.textContent = '讀取中';
+      setHealth('', '檢查中');
+      try {
+        const healthResponse = await fetch(urlFor('/health'), {
+          method: 'GET',
+          headers: { Accept: 'application/json' },
+        });
+        if (!healthResponse.ok) {
+          throw new Error(`health HTTP ${healthResponse.status}`);
+        }
+
+        const agents = await readJson('/agents', 'agents');
+        renderAgents(agents);
+        setHealth('ok', '已連線');
+      } catch (error) {
+        console.warn('[settings] fetch failed', error);
+        setHealth('danger', '連線失敗');
+        showFetchError('無法取得 AI_ORG API 狀態，暫時保留既有設定畫面');
+      } finally {
+        els.refresh.classList.remove('loading');
+        els.refresh.textContent = '重新整理';
+      }
+    }
+
+    els.apiBase.textContent = `API: ${apiBase}`;
+    els.refresh.addEventListener('click', refreshSettingsStatus);
+    refreshSettingsStatus();
+  });
 </script>
 </body>
 </html>
