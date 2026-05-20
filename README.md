@@ -1,5 +1,7 @@
 # AI_ORG Dashboard
 
+> **Project: ForgeBench｜AI 鍛造台** — Human Oversight Console(對外品牌 ForgeBench)
+
 AI-Native 軟體組織的 **Human Oversight Console** — 看 AI 代理在做什麼、待批什麼、憲法守得好不好,人類只負責批准、提方向。
 
 7 頁全接 FastAPI runtime([ai-org-runtime](https://github.com/adexenx123/ai-org-runtime),憲法 SSOT 在 [AI_ORG](https://github.com/adexenx123/AI_ORG))。
@@ -15,6 +17,15 @@ AI-Native 軟體組織的 **Human Oversight Console** — 看 AI 代理在做什
 | 歷史 History | `history.html` | `GET /tasks` + `GET /tasks/{id}` | 時間軸倒序、點開卡片 fetch diff inline / modal |
 | 憲法 Constitution | `constitution.html` | `GET /constitution` | 憲法 11 條文 side nav + 簡易 markdown render(無外部 lib) |
 | 設定 Settings | `settings.html` | `GET /health` + `GET /agents` | 連線狀態紅/綠燈、角色統計、引擎分佈、manifest version、重新整理 |
+
+### Phase 1 新增 server 端點(dashboard 還沒接,preview)
+
+| 端點 | 用途 |
+|---|---|
+| `POST /graph/task` | 走 LangGraph 路線啟任務(取代 dispatcher 路線可選) |
+| `GET /graph/tasks/{id}/state` | 讀 PostgresSaver checkpoint state |
+| `POST /graph/tasks/{id}/approve` | graph 從 interrupt 點 resume → commit |
+| `POST /graph/tasks/{id}/reject` | 標 blocked,不執行 commit |
 
 ## Stack
 
