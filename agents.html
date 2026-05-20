@@ -154,7 +154,7 @@
 <script src="shared.js"></script>
 <script src="dashboard-api.js"></script>
 <script>
-  const apiBase = (new URLSearchParams(location.search).get("api") || window.API_BASE || "http://127.0.0.1:8765").replace(/\/+$/, "");
+  const apiBase = (new URLSearchParams(location.search).get("api") || window.API_BASE || "http://127.0.0.1:8080").replace(/\/+$/, "");
 
   document.addEventListener('DOMContentLoaded', () => {
     const agentsGrid = document.querySelector('.agent-grid');

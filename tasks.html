@@ -103,7 +103,7 @@
         </div>
 
         <div id="task-list">
-          <div class="task-empty" style="padding:30px;text-align:center;color:var(--muted);font-size:13px">尚無任務。從 terminal 派一個試試:<code style="display:block;margin-top:8px;font-size:11px">curl -X POST http://127.0.0.1:8765/task -H "Content-Type: application/json" -d '{"spec":"..."}'</code></div>
+          <div class="task-empty" style="padding:30px;text-align:center;color:var(--muted);font-size:13px">尚無任務。從 terminal 派一個試試:<code style="display:block;margin-top:8px;font-size:11px">curl -X POST http://127.0.0.1:8080/task -H "Content-Type: application/json" -d '{"spec":"..."}'</code></div>
         
       </div>
 
@@ -211,7 +211,7 @@
     const taskCountEl = document.querySelector('.card-head .count');
     const summaryCards = document.querySelectorAll('.summary-row .stat-card .value');
     const apiOverride = new URLSearchParams(window.location.search).get('api');
-    const apiBase = (apiOverride || window.API_BASE || 'http://127.0.0.1:8765').replace(/\/+$/, '');
+    const apiBase = (apiOverride || window.API_BASE || 'http://127.0.0.1:8080').replace(/\/+$/, '');
     let tasks = [];
     let hasRenderedApiData = false;
     let isLoadingTasks = false;

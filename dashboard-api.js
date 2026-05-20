@@ -1,6 +1,6 @@
 /* AI_ORG dashboard API bridge */
 
-const DEFAULT_API_BASE = "http://127.0.0.1:8765";
+const DEFAULT_API_BASE = "http://127.0.0.1:8080";
 const API_BASE = (() => {
   const params = new URLSearchParams(window.location.search);
   const override = params.get("api");

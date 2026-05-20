@@ -462,7 +462,7 @@
   }
 
   document.addEventListener('DOMContentLoaded', () => {
-    const DEFAULT_API_BASE = 'http://127.0.0.1:8765';
+    const DEFAULT_API_BASE = 'http://127.0.0.1:8080';
     const params = new URLSearchParams(window.location.search);
     const apiOverride = params.get('api');
     const apiBase = (apiOverride || DEFAULT_API_BASE).replace(/\/+$/, '');

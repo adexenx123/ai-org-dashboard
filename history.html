@@ -144,7 +144,7 @@
 
   function getHistoryApiBase() {
     const override = new URLSearchParams(window.location.search).get('api');
-    return (override || window.API_BASE || 'http://127.0.0.1:8765').replace(/\/+$/, '');
+    return (override || window.API_BASE || 'http://127.0.0.1:8080').replace(/\/+$/, '');
   }
 
   function normalizeTaskList(payload) {
