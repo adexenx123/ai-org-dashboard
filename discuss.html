@@ -376,7 +376,7 @@
           <div class="msg planner">
             <div class="ava">🔍</div>
             <div class="msg-body">
-              <div class="msg-name">Planner 思考中...</div>
+              <div class="msg-name">claude is typing...</div>
               <div class="typing"><span></span><span></span><span></span></div>
             </div>
           </div>
@@ -393,8 +393,8 @@
             <button class="btn" onclick="quickAsk('召集 Backend 一起看')">+ 召集</button>
           </div>
           <div style="display:flex;gap:8px;align-items:center">
-            <span class="hint">Cmd+Enter 送出</span>
-            <button class="btn boss" onclick="sendMsg()">送出</button>
+            <span class="hint">Enter 送出 · Shift+Enter 換行</span>
+            <button class="btn boss" id="send-btn" onclick="sendMsg()">送出</button>
           </div>
         </div>
       </div>
@@ -433,42 +433,206 @@
 
 <script src="shared.js"></script>
 <script>
+  const DEFAULT_API_BASE = 'http://127.0.0.1:8765';
+  const chatState = {
+    history: [],
+    isSending: false,
+    renderTimer: null,
+  };
+
+  function getChatApiBase() {
+    const params = new URLSearchParams(window.location.search);
+    const apiOverride = params.get('api');
+    return (apiOverride || window.API_BASE || DEFAULT_API_BASE).replace(/\/+$/, '');
+  }
+
   function quickAsk(text) {
     document.getElementById('msg-input').value = text;
     document.getElementById('msg-input').focus();
   }
-  function sendMsg() {
-    const v = document.getElementById('msg-input').value.trim();
-    if (!v) return showToast('⚠️','請先輸入內容', true);
-    const chat = document.getElementById('chat');
-    const msg = document.createElement('div');
-    msg.className = 'msg user';
-    msg.innerHTML = `<div class="ava">J</div><div class="msg-body"><div class="msg-name">你 (CEO) · 剛剛</div><div class="msg-bubble">${escapeHtml(v)}</div></div>`;
-    chat.appendChild(msg);
-    document.getElementById('msg-input').value = '';
-    chat.scrollTop = chat.scrollHeight;
 
-    // Show typing
-    const typing = document.getElementById('typing-row');
-    typing.style.display = 'block';
-    chat.appendChild(typing);
-    chat.scrollTop = chat.scrollHeight;
-    setTimeout(() => {
-      typing.style.display = 'none';
-      const reply = document.createElement('div');
-      reply.className = 'msg orch';
-      reply.innerHTML = `<div class="ava">🎯</div><div class="msg-body"><div class="msg-name">CEO-orchestrator · 剛剛</div><div class="msg-bubble">收到。正在處理你的訊息，我會把相關角色拉進來...（demo 模式）</div></div>`;
-      chat.appendChild(reply);
-      chat.scrollTop = chat.scrollHeight;
-    }, 1800);
+  async function sendMsg() {
+    if (chatState.isSending) return showToast('⏳','Claude 還在回覆中', true);
+    const input = document.getElementById('msg-input');
+    const v = input.value.trim();
+    if (!v) return showToast('⚠️','請先輸入內容', true);
+
+    const chat = document.getElementById('chat');
+    appendMessage(chat, 'user', 'J', '你 (CEO) · 剛剛', v);
+    chatState.history.push({ role: 'user', content: v });
+    input.value = '';
+    setSendingState(true);
+    showTyping(chat);
+
+    let reply = null;
+    try {
+      const response = await fetch(`${getChatApiBase()}/chat`, {
+        method: 'POST',
+        headers: {
+          Accept: 'text/event-stream',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prompt: v,
+          messages: chatState.history,
+        }),
+      });
+
+      if (!response.ok) {
+        const detail = await response.text();
+        throw new Error(detail || `HTTP ${response.status}`);
+      }
+      if (!response.body) throw new Error('Streaming response is not available');
+
+      reply = appendMessage(chat, 'orch', '🎯', 'Claude · 剛剛', '');
+      const fullReply = await readSseStream(response.body, chunk => {
+        hideTyping();
+        reply.update(chunk);
+      });
+      hideTyping();
+
+      if (!fullReply.trim()) throw new Error('Empty chat response');
+      chatState.history.push({ role: 'assistant', content: fullReply });
+      reply.flush();
+    } catch (error) {
+      hideTyping();
+      showToast('⚠️','無法連到 Claude，暫時保留示範回覆', true);
+      if (reply && !reply.text().trim()) reply.remove();
+      appendMockFallback(chat);
+    } finally {
+      setSendingState(false);
+    }
   }
+
   function newSession() {
     showToast('💡','新討論已建立，請輸入主題');
     document.getElementById('msg-input').focus();
   }
+
+  function appendMessage(chat, type, avatar, name, text) {
+    const msg = document.createElement('div');
+    const bubble = document.createElement('div');
+    let buffer = text;
+    msg.className = `msg ${type}`;
+    msg.innerHTML = `<div class="ava">${escapeHtml(avatar)}</div><div class="msg-body"><div class="msg-name">${escapeHtml(name)}</div></div>`;
+    bubble.className = 'msg-bubble';
+    bubble.innerHTML = formatMessage(buffer);
+    msg.querySelector('.msg-body').appendChild(bubble);
+    chat.appendChild(msg);
+    scrollChat(chat);
+
+    return {
+      update(chunk) {
+        buffer += chunk;
+        scheduleRender(() => {
+          bubble.innerHTML = formatMessage(buffer);
+          scrollChat(chat);
+        });
+      },
+      flush() {
+        bubble.innerHTML = formatMessage(buffer);
+        scrollChat(chat);
+      },
+      text() {
+        return buffer;
+      },
+      remove() {
+        msg.remove();
+      },
+    };
+  }
+
+  function appendMockFallback(chat) {
+    appendMessage(
+      chat,
+      'orch',
+      '🎯',
+      'CEO-orchestrator · demo fallback',
+      '收到。正在處理你的訊息，我會把相關角色拉進來...（demo 模式）',
+    );
+  }
+
+  async function readSseStream(body, onChunk) {
+    const reader = body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let fullText = '';
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const events = buffer.split(/\r?\n\r?\n/);
+      buffer = events.pop() || '';
+      events.forEach(eventText => {
+        const chunk = parseSseEvent(eventText);
+        if (!chunk || chunk === '[DONE]') return;
+        fullText += chunk;
+        onChunk(chunk);
+      });
+    }
+
+    buffer += decoder.decode();
+    const tail = parseSseEvent(buffer);
+    if (tail && tail !== '[DONE]') {
+      fullText += tail;
+      onChunk(tail);
+    }
+    return fullText;
+  }
+
+  function parseSseEvent(eventText) {
+    const dataLines = [];
+    eventText.split(/\r?\n/).forEach(line => {
+      if (line.startsWith('data:')) {
+        dataLines.push(line.slice(5).replace(/^ /, ''));
+      } else if (dataLines.length && !/^(event|id|retry):/.test(line)) {
+        dataLines.push(line);
+      }
+    });
+    return dataLines.join('\n');
+  }
+
+  function showTyping(chat) {
+    const typing = document.getElementById('typing-row');
+    typing.style.display = 'block';
+    chat.appendChild(typing);
+    scrollChat(chat);
+  }
+
+  function hideTyping() {
+    document.getElementById('typing-row').style.display = 'none';
+  }
+
+  function setSendingState(isSending) {
+    chatState.isSending = isSending;
+    const button = document.getElementById('send-btn');
+    if (button) button.disabled = isSending;
+  }
+
+  function scheduleRender(render) {
+    if (chatState.renderTimer) return;
+    chatState.renderTimer = window.setTimeout(() => {
+      chatState.renderTimer = null;
+      render();
+    }, 50);
+  }
+
+  function scrollChat(chat) {
+    chat.scrollTop = chat.scrollHeight;
+  }
+
+  function formatMessage(s) {
+    return escapeHtml(s).replace(/\n/g, '<br>');
+  }
+
   function escapeHtml(s) { return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
   document.getElementById('msg-input').addEventListener('keydown', e => {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') sendMsg();
+    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
+      e.preventDefault();
+      sendMsg();
+    }
   });
   // Auto-scroll on load
   document.addEventListener('DOMContentLoaded', () => {

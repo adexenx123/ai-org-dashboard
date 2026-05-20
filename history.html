@@ -44,6 +44,20 @@
   .tl-event .tl-time { font-size: 11px; color: var(--dim); white-space: nowrap; }
   .tl-event .tl-meta { font-size: 11.5px; color: var(--muted); margin-top: 4px; }
   .tl-event .tl-body { font-size: 12.5px; color: var(--muted); margin-top: 8px; line-height: 1.55; }
+  .tl-event.is-clickable { cursor: pointer; transition: border-color 0.15s ease, transform 0.15s ease; }
+  .tl-event.is-clickable:hover { border-color: var(--accent); transform: translateY(-1px); }
+  .tl-event.is-open { border-color: var(--accent); }
+  .history-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: -6px 0 16px; }
+  .history-source { font-size: 11.5px; color: var(--dim); }
+  .history-empty { background: var(--panel-2); border: 1px dashed var(--border); border-radius: 8px; color: var(--muted); font-size: 12.5px; padding: 16px; }
+  .tl-status { display: inline-flex; align-items: center; gap: 4px; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); font-size: 10.5px; margin-right: 6px; }
+  .tl-diff { margin-top: 12px; border-top: 1px solid var(--border); padding-top: 10px; }
+  .tl-diff pre {
+    max-height: 360px; overflow: auto; white-space: pre-wrap; word-break: break-word;
+    background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+    color: var(--text); font-size: 11.5px; line-height: 1.45; padding: 10px; margin: 8px 0 0;
+  }
+  .tl-loading { color: var(--accent); font-size: 11.5px; margin-top: 8px; }
 
   .day-header {
     font-size: 12px;
@@ -81,9 +95,13 @@
     <div class="tab" onclick="switchTab(event, 'const')">📜 修憲</div>
     <div class="tab" onclick="switchTab(event, 'failure')">🪤 踩坑</div>
   </div>
+  <div class="history-toolbar">
+    <div class="history-source" id="history-source">顯示示範資料，連線成功後會換成真實任務歷史。</div>
+    <button class="btn" id="history-refresh" type="button">重新整理</button>
+  </div>
 
   <div class="grid">
-    <div class="col">
+    <div class="col" id="history-timeline-root">
 
       <div class="day-header">📅 今天 · 2026-05-20</div>
       <div class="timeline" data-day="today">
@@ -319,12 +337,294 @@
 </div>
 
 <script src="shared.js"></script>
+<script src="dashboard-api.js"></script>
 <script>
+  const historyState = {
+    currentFilter: 'all',
+    hasApiData: false,
+    isFetchingList: false,
+    detailCache: new Map(),
+  };
+
   function switchTab(e, type) {
+    historyState.currentFilter = type;
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     e.target.classList.add('active');
     document.querySelectorAll('.tl-event').forEach(ev => {
       ev.style.display = (type === 'all' || ev.dataset.type === type) ? '' : 'none';
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const refreshButton = document.getElementById('history-refresh');
+    if (refreshButton) {
+      refreshButton.addEventListener('click', () => fetchHistoryTasks());
+    }
+    fetchHistoryTasks();
+  });
+
+  function getHistoryApiBase() {
+    const override = new URLSearchParams(window.location.search).get('api');
+    return (override || window.API_BASE || 'http://127.0.0.1:8765').replace(/\/+$/, '');
+  }
+
+  function normalizeTaskList(payload) {
+    if (Array.isArray(payload)) return payload;
+    if (Array.isArray(payload.tasks)) return payload.tasks;
+    if (Array.isArray(payload.data)) return payload.data;
+    return [];
+  }
+
+  function unwrapTaskDetail(payload) {
+    if (payload && typeof payload === 'object' && payload.data && typeof payload.data === 'object') {
+      return payload.data;
+    }
+    return payload || {};
+  }
+
+  function textValue(value, fallback = '-') {
+    if (value === null || value === undefined || value === '') return fallback;
+    return String(value);
+  }
+
+  function getTaskId(task) {
+    return textValue(task.task_id || task.id || task.slug, '');
+  }
+
+  function getTaskTitle(task) {
+    return textValue(task.title || task.name || getTaskId(task), '未命名任務');
+  }
+
+  function getTaskTime(task) {
+    return task.completed_at || task.started_at || task.updated_at || task.created_at || '';
+  }
+
+  function parseTaskTime(task) {
+    const time = Date.parse(getTaskTime(task));
+    return Number.isNaN(time) ? 0 : time;
+  }
+
+  function getStatusType(status) {
+    const value = textValue(status, '').toLowerCase();
+    if (value === 'completed' || value === 'done' || value === 'shipped') return 'ship';
+    if (value === 'failed' || value === 'blocked' || value === 'rejected') return 'failure';
+    if (value.includes('constitution') || value === 'const') return 'const';
+    return 'decision';
+  }
+
+  function formatDateLabel(task) {
+    const source = getTaskTime(task);
+    const date = source ? new Date(source) : null;
+    if (!date || Number.isNaN(date.getTime())) return '日期未記錄';
+    return new Intl.DateTimeFormat('zh-TW', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      weekday: 'short',
+    }).format(date);
+  }
+
+  function formatTimeLabel(task) {
+    const source = getTaskTime(task);
+    const date = source ? new Date(source) : null;
+    if (!date || Number.isNaN(date.getTime())) return '--:--';
+    return new Intl.DateTimeFormat('zh-TW', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).format(date);
+  }
+
+  function setHistoryLoading(isLoading) {
+    historyState.isFetchingList = isLoading;
+    const refreshButton = document.getElementById('history-refresh');
+    const source = document.getElementById('history-source');
+    if (refreshButton) {
+      refreshButton.disabled = isLoading;
+      refreshButton.textContent = isLoading ? '載入中...' : '重新整理';
+    }
+    if (source && isLoading) {
+      source.textContent = historyState.hasApiData ? '正在更新真實任務歷史...' : '正在連線取得真實任務歷史...';
+    }
+  }
+
+  function showHistoryFetchError(message) {
+    if (typeof showToast === 'function') {
+      showToast('⚠️', message, true);
+    }
+  }
+
+  async function fetchHistoryTasks() {
+    if (historyState.isFetchingList) return;
+    setHistoryLoading(true);
+    try {
+      const response = await fetch(`${getHistoryApiBase()}/tasks`, {
+        headers: { Accept: 'application/json' },
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const tasks = normalizeTaskList(await response.json());
+      renderHistoryTimeline(tasks);
+      historyState.hasApiData = true;
+      const source = document.getElementById('history-source');
+      if (source) source.textContent = `已載入 ${tasks.length} 筆真實任務歷史；點卡片可查看 diff。`;
+    } catch (error) {
+      console.warn('[history] fetch tasks failed', error);
+      showHistoryFetchError('無法取得任務歷史，暫時保留示範資料');
+      const source = document.getElementById('history-source');
+      if (source && !historyState.hasApiData) {
+        source.textContent = '顯示示範資料，連線成功後會換成真實任務歷史。';
+      }
+    } finally {
+      setHistoryLoading(false);
+    }
+  }
+
+  function renderHistoryTimeline(tasks) {
+    const root = document.getElementById('history-timeline-root');
+    if (!root) return;
+    root.replaceChildren();
+
+    const sortedTasks = tasks.slice().sort((a, b) => parseTaskTime(b) - parseTaskTime(a));
+    if (!sortedTasks.length) {
+      const empty = document.createElement('div');
+      empty.className = 'history-empty';
+      empty.textContent = '目前沒有任務歷史。';
+      root.appendChild(empty);
+      return;
+    }
+
+    let currentDate = '';
+    let timeline = null;
+    sortedTasks.forEach(task => {
+      const dateLabel = formatDateLabel(task);
+      if (dateLabel !== currentDate) {
+        currentDate = dateLabel;
+        root.appendChild(createTextElement('div', 'day-header', `📅 ${dateLabel}`));
+        timeline = document.createElement('div');
+        timeline.className = 'timeline';
+        root.appendChild(timeline);
+      }
+      if (timeline) timeline.appendChild(createTaskEvent(task));
+    });
+    applyHistoryFilter();
+  }
+
+  function createTaskEvent(task) {
+    const id = getTaskId(task);
+    const status = textValue(task.status || task.state, 'unknown');
+    const type = getStatusType(status);
+    const event = document.createElement('div');
+    event.className = `tl-event ${type} is-clickable`;
+    event.dataset.type = type;
+    event.dataset.taskId = id;
+    event.tabIndex = 0;
+    event.setAttribute('role', 'button');
+    event.setAttribute('aria-expanded', 'false');
+
+    const head = document.createElement('div');
+    head.className = 'tl-head';
+
+    const main = document.createElement('div');
+    main.appendChild(createTextElement('div', 'tl-title', getTaskTitle(task)));
+
+    const meta = document.createElement('div');
+    meta.className = 'tl-meta';
+    meta.append(
+      createTextElement('span', 'tl-status', status),
+      document.createTextNode(`ID ${textValue(id)} · executor ${textValue(task.executor || task.role)} · commit `),
+      createCodeElement(textValue(task.commit_sha, '-')),
+    );
+    main.appendChild(meta);
+
+    head.append(main, createTextElement('div', 'tl-time', formatTimeLabel(task)));
+    event.appendChild(head);
+    event.appendChild(createTextElement('div', 'tl-body', textValue(task.summary || task.description || task.problem, '點開查看完整狀態與 diff。')));
+
+    event.addEventListener('click', () => toggleTaskDetail(event));
+    event.addEventListener('keydown', eventKey => {
+      if (eventKey.key === 'Enter' || eventKey.key === ' ') {
+        eventKey.preventDefault();
+        toggleTaskDetail(event);
+      }
+    });
+    return event;
+  }
+
+  function createTextElement(tagName, className, text) {
+    const element = document.createElement(tagName);
+    if (className) element.className = className;
+    element.textContent = text;
+    return element;
+  }
+
+  function createCodeElement(text) {
+    const code = document.createElement('code');
+    code.textContent = text;
+    return code;
+  }
+
+  async function toggleTaskDetail(event) {
+    const id = event.dataset.taskId;
+    if (!id) return;
+    const existing = event.querySelector('.tl-diff');
+    if (existing) {
+      existing.remove();
+      event.classList.remove('is-open');
+      event.setAttribute('aria-expanded', 'false');
+      return;
+    }
+
+    event.classList.add('is-open');
+    event.setAttribute('aria-expanded', 'true');
+    const loading = createTextElement('div', 'tl-loading', '正在載入 diff...');
+    event.appendChild(loading);
+
+    try {
+      const detail = await fetchTaskDetail(id);
+      loading.remove();
+      event.appendChild(createDiffPanel(detail));
+    } catch (error) {
+      loading.remove();
+      event.classList.remove('is-open');
+      event.setAttribute('aria-expanded', 'false');
+      console.warn('[history] fetch task detail failed', error);
+      showHistoryFetchError('無法取得任務 diff，請稍後再試');
+    }
+  }
+
+  async function fetchTaskDetail(id) {
+    if (historyState.detailCache.has(id)) return historyState.detailCache.get(id);
+    const response = await fetch(`${getHistoryApiBase()}/tasks/${encodeURIComponent(id)}`, {
+      headers: { Accept: 'application/json' },
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const detail = unwrapTaskDetail(await response.json());
+    historyState.detailCache.set(id, detail);
+    return detail;
+  }
+
+  function createDiffPanel(detail) {
+    const panel = document.createElement('div');
+    panel.className = 'tl-diff';
+    const status = textValue(detail.status || detail.state, 'unknown');
+    panel.appendChild(createTextElement('div', 'tl-meta', `完整狀態：${status}`));
+    const pre = document.createElement('pre');
+    pre.textContent = getDiffText(detail);
+    panel.appendChild(pre);
+    return panel;
+  }
+
+  function getDiffText(detail) {
+    const diff = detail.diff || detail.patch || detail.git_diff || detail.unified_diff || detail.changes;
+    if (typeof diff === 'string' && diff.trim()) return diff;
+    if (Array.isArray(diff)) return diff.map(item => typeof item === 'string' ? item : JSON.stringify(item, null, 2)).join('\n');
+    if (diff && typeof diff === 'object') return JSON.stringify(diff, null, 2);
+    return '這個任務目前沒有 diff。';
+  }
+
+  function applyHistoryFilter() {
+    document.querySelectorAll('.tl-event').forEach(ev => {
+      ev.style.display = (historyState.currentFilter === 'all' || ev.dataset.type === historyState.currentFilter) ? '' : 'none';
     });
   }
 </script>
