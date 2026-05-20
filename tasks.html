@@ -87,6 +87,16 @@
 
   <div class="grid">
     <div class="col">
+
+      <!-- Phase 1:Graph Mode 任務(LangGraph orchestrator)-->
+      <div class="card" id="graph-section" style="display:none;margin-bottom:16px">
+        <div class="card-head">
+          <h3>🔀 Graph Mode 任務 <span class="en">LangGraph · PostgresSaver</span> <span class="count" id="graph-count">0</span></h3>
+        </div>
+        <div id="graph-list"></div>
+        <div id="graph-empty" style="padding:14px;font-size:13px;color:var(--dim);display:none">尚無 graph 模式任務(走 dispatcher 路線的任務仍顯示在下方)</div>
+      </div>
+
       <div class="card">
         <div class="card-head">
           <h3>所有任務 <span class="en">All Tasks</span> <span class="count">17</span></h3>
@@ -513,6 +523,103 @@
     searchEl.addEventListener('input', renderTasks);
     fetchTasks();
     window.setInterval(fetchTasks, 5000);
+
+    // ===== Phase 1:Graph Mode tasks integration =====
+    const graphSectionEl = document.getElementById('graph-section');
+    const graphListEl = document.getElementById('graph-list');
+    const graphCountEl = document.getElementById('graph-count');
+    const graphEmptyEl = document.getElementById('graph-empty');
+
+    function escapeHtmlText(s) {
+      return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    function graphStatusBadge(status) {
+      const map = {
+        awaiting_approval: ['urgent', '待批'],
+        completed:         ['shipping', '完成'],
+        blocked:           ['blocked', '阻擋'],
+        failed:            ['blocked', '失敗'],
+        running:           ['running', '執行中'],
+        queued:            ['queue', '排隊'],
+      };
+      const [cls, label] = map[status] || ['queue', status || '?'];
+      return `<span class="badge ${cls}">${escapeHtmlText(label)}</span>`;
+    }
+
+    async function fetchGraphTasks() {
+      try {
+        const response = await fetch(`${apiBase}/graph/tasks`, { headers: { Accept: 'application/json' } });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const list = await response.json();
+        renderGraphTasks(Array.isArray(list) ? list : []);
+      } catch (error) {
+        graphSectionEl.style.display = 'none';
+      }
+    }
+
+    function renderGraphTasks(list) {
+      graphSectionEl.style.display = '';
+      graphCountEl.textContent = String(list.length);
+      if (list.length === 0) {
+        graphListEl.innerHTML = '';
+        graphEmptyEl.style.display = '';
+        return;
+      }
+      graphEmptyEl.style.display = 'none';
+      graphListEl.innerHTML = list.map(t => {
+        const taskId = escapeHtmlText(t.task_id);
+        const title = escapeHtmlText(t.title || t.task_id);
+        const executor = escapeHtmlText(t.executor || '-');
+        const status = t.status || 'queued';
+        const showButtons = status === 'awaiting_approval';
+        const buttons = showButtons
+          ? `<button class="btn primary" data-graph-action="approve" data-task-id="${taskId}">✓ 批准</button>
+             <button class="btn" data-graph-action="reject" data-task-id="${taskId}" style="margin-left:8px">✗ 拒絕</button>`
+          : `<span class="meta" style="color:var(--dim);font-size:12px">${graphStatusBadge(status)}</span>`;
+        const errLine = t.error ? `<div class="meta" style="color:var(--err,#c33);font-size:12px">${escapeHtmlText(t.error)}</div>` : '';
+        return `
+          <div class="task-row" data-graph-task="${taskId}">
+            <div class="top">
+              <div>
+                <span class="badge spec">GRAPH</span>
+                <span class="title">${title}</span>
+                ${graphStatusBadge(status)}
+              </div>
+              <div>${buttons}</div>
+            </div>
+            <div class="meta">🔀 ${taskId} · ⚙️ ${executor}</div>
+            ${errLine}
+          </div>`;
+      }).join('');
+
+      graphListEl.querySelectorAll('button[data-graph-action]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const action = btn.dataset.graphAction;
+          const taskId = btn.dataset.taskId;
+          btn.disabled = true;
+          try {
+            const resp = await fetch(`${apiBase}/graph/tasks/${encodeURIComponent(taskId)}/${action}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+            });
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            if (typeof showToast === 'function') {
+              showToast(action === 'approve' ? '✅' : '↩️', `Graph 任務已${action === 'approve' ? '批准' : '拒絕'}: ${taskId}`);
+            }
+            await fetchGraphTasks();
+          } catch (err) {
+            if (typeof showToast === 'function') {
+              showToast('⚠️', `Graph ${action} 失敗:${taskId}`, true);
+            }
+            btn.disabled = false;
+          }
+        });
+      });
+    }
+
+    fetchGraphTasks();
+    window.setInterval(fetchGraphTasks, 5000);
   });
 
   function filter(e, type) {

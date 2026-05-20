@@ -100,6 +100,15 @@
     <button class="btn" id="history-refresh" type="button">重新整理</button>
   </div>
 
+  <!-- Phase 1: Graph Mode 完成任務歷史 -->
+  <div class="card" id="graph-history-section" style="display:none;margin:16px 0">
+    <div class="card-head">
+      <h3>🔀 Graph Mode 歷史 <span class="en">LangGraph completed / blocked</span> <span class="count" id="graph-history-count">0</span></h3>
+    </div>
+    <div id="graph-history-list" style="padding:0 16px 12px"></div>
+    <div id="graph-history-empty" style="padding:14px;font-size:13px;color:var(--dim);display:none">尚無 graph-mode 完成或受阻任務</div>
+  </div>
+
   <div class="grid">
     <div class="col" id="history-timeline-root">
 
@@ -627,6 +636,93 @@
       ev.style.display = (historyState.currentFilter === 'all' || ev.dataset.type === historyState.currentFilter) ? '' : 'none';
     });
   }
+
+  // ===== Phase 1: Graph Mode history integration =====
+  function _hEscape(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  async function fetchGraphHistory() {
+    const apiBase = getApiBase();
+    const sectionEl = document.getElementById('graph-history-section');
+    const listEl = document.getElementById('graph-history-list');
+    const countEl = document.getElementById('graph-history-count');
+    const emptyEl = document.getElementById('graph-history-empty');
+    try {
+      const response = await fetch(`${apiBase}/graph/tasks`, { headers: { Accept: 'application/json' } });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const all = await response.json();
+      const list = (Array.isArray(all) ? all : []).filter(t =>
+        ['completed','blocked','failed'].includes(t.status)
+      );
+      sectionEl.style.display = '';
+      countEl.textContent = String(list.length);
+      if (list.length === 0) {
+        listEl.innerHTML = '';
+        emptyEl.style.display = '';
+        return;
+      }
+      emptyEl.style.display = 'none';
+      listEl.innerHTML = list.map(t => {
+        const tid = _hEscape(t.task_id);
+        const title = _hEscape(t.title || t.task_id);
+        const status = t.status;
+        const cls = status === 'completed' ? 'success' : 'failure';
+        const errLine = t.error ? `<div class="tl-meta" style="color:var(--err,#c33)">${_hEscape(t.error)}</div>` : '';
+        return `
+          <div class="tl-event ${cls} graph-history-row" data-graph-task="${tid}" style="cursor:pointer">
+            <div class="tl-head">
+              <div>
+                <div class="tl-title">🔀 ${title}</div>
+                <div class="tl-meta">${tid} · status: ${_hEscape(status)} · ⚙️ ${_hEscape(t.executor || '-')}</div>
+                ${errLine}
+              </div>
+              <div class="tl-time">點開看 state →</div>
+            </div>
+            <div class="graph-detail" data-task-id="${tid}" style="display:none;margin-top:8px;padding:8px;background:var(--bg-soft,#1a1a1a);border-radius:6px;font-size:12px;font-family:monospace;white-space:pre-wrap;max-height:300px;overflow:auto"></div>
+          </div>`;
+      }).join('');
+
+      // 點開卡片 → 抓 /graph/tasks/{id} 看完整 state
+      listEl.querySelectorAll('.graph-history-row').forEach(row => {
+        row.addEventListener('click', async (e) => {
+          // 避免 row 內可能的 button 觸發冒泡
+          const detailEl = row.querySelector('.graph-detail');
+          if (!detailEl) return;
+          const tid = row.dataset.graphTask;
+          if (detailEl.style.display === 'block') {
+            detailEl.style.display = 'none';
+            return;
+          }
+          detailEl.textContent = '載入中...';
+          detailEl.style.display = 'block';
+          try {
+            const resp = await fetch(`${apiBase}/graph/tasks/${encodeURIComponent(tid)}`, { headers: { Accept: 'application/json' } });
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            const state = await resp.json();
+            const diff = state.diff || '(無 diff)';
+            const guard = state.guard ? JSON.stringify(state.guard, null, 2) : '-';
+            const qa = state.qa ? JSON.stringify(state.qa, null, 2) : '-';
+            detailEl.textContent =
+              `task_id: ${state.task_id}\nstatus: ${state.status}\nerror: ${state.error || '-'}\n` +
+              `\n--- guard ---\n${guard}\n` +
+              `\n--- qa ---\n${qa}\n` +
+              `\n--- diff ---\n${diff.length > 2000 ? diff.slice(0, 2000) + '... (truncated)' : diff}`;
+          } catch (err) {
+            detailEl.textContent = `load failed: ${err.message}`;
+          }
+        });
+      });
+    } catch (err) {
+      sectionEl.style.display = 'none';
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    fetchGraphHistory();
+    const refreshBtn = document.getElementById('history-refresh');
+    if (refreshBtn) refreshBtn.addEventListener('click', () => fetchGraphHistory());
+  });
 </script>
 </body>
 </html>
