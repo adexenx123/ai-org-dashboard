@@ -23,6 +23,21 @@
   .task-row.running { border-left: 3px solid var(--accent); }
   .task-row.blocked { border-left: 3px solid var(--danger); }
   .task-row.queue { border-left: 3px solid var(--dim); }
+  .task-row.rejected,
+  .task-row.failed { border-left: 3px solid var(--danger); }
+
+  .task-row .actions { display: flex; gap: 6px; flex-wrap: wrap; }
+  .task-row .detail-grid { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; font-size: 11.5px; color: var(--muted); }
+  .task-row .detail-grid span { border: 1px solid var(--border-soft); border-radius: 999px; padding: 2px 8px; background: rgba(15,23,42,0.22); }
+  .status-select {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    color: var(--text);
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+  .status-select:focus { outline: none; border-color: var(--accent); }
 
   .progress-mini { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
   .progress-mini .bar { width: 80px; height: 4px; background: var(--border); border-radius: 999px; overflow: hidden; }
@@ -57,13 +72,17 @@
   </div>
 
   <div class="filter-bar">
-    <span class="chip active" onclick="filter(event,'all')">全部</span>
-    <span class="chip" onclick="filter(event,'urgent')">⏳ 待批准</span>
-    <span class="chip" onclick="filter(event,'running')">🔄 進行中</span>
-    <span class="chip" onclick="filter(event,'shipping')">✅ 待 ship</span>
-    <span class="chip" onclick="filter(event,'blocked')">🚨 卡住</span>
-    <span class="chip" onclick="filter(event,'queue')">📥 隊列</span>
-    <input class="search" placeholder="🔍 搜尋任務名稱、agent..." oninput="searchTasks(this.value)">
+    <select id="status-filter" class="status-select" aria-label="依任務狀態篩選">
+      <option value="all">全部狀態</option>
+      <option value="queued">queued</option>
+      <option value="running">running</option>
+      <option value="awaiting_approval">awaiting_approval</option>
+      <option value="completed">completed</option>
+      <option value="failed">failed</option>
+      <option value="rejected">rejected</option>
+      <option value="blocked">blocked</option>
+    </select>
+    <input id="task-search" class="search" placeholder="🔍 搜尋任務名稱、agent..." oninput="searchTasks(this.value)">
   </div>
 
   <div class="grid">
@@ -273,19 +292,240 @@
 </div>
 
 <script src="shared.js"></script>
+<script src="dashboard-api.js"></script>
 <script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const taskListEl = document.getElementById('task-list');
+    const statusFilterEl = document.getElementById('status-filter');
+    const searchEl = document.getElementById('task-search');
+    const taskCountEl = document.querySelector('.card-head .count');
+    const summaryCards = document.querySelectorAll('.summary-row .stat-card .value');
+    const apiOverride = new URLSearchParams(window.location.search).get('api');
+    const apiBase = (apiOverride || window.API_BASE || 'http://127.0.0.1:8765').replace(/\/+$/, '');
+    let tasks = [];
+    let hasRenderedApiData = false;
+    let isLoadingTasks = false;
+
+    function normalizeTaskList(payload) {
+      if (Array.isArray(payload)) return payload;
+      if (Array.isArray(payload.tasks)) return payload.tasks;
+      if (Array.isArray(payload.data)) return payload.data;
+      return [];
+    }
+
+    function getTaskId(task) {
+      return task.task_id || task.id || task.slug || '';
+    }
+
+    function textValue(value, fallback = '-') {
+      if (value === null || value === undefined || value === '') return fallback;
+      return String(value);
+    }
+
+    function getTaskStatus(task) {
+      return textValue(task.status || task.state, 'queued');
+    }
+
+    function getTaskTitle(task) {
+      return textValue(task.title || task.name || getTaskId(task), '未命名任務');
+    }
+
+    function getRowClass(status) {
+      const classByStatus = {
+        awaiting_approval: 'urgent',
+        completed: 'shipping',
+        running: 'running',
+        blocked: 'blocked',
+        queued: 'queue',
+        failed: 'failed',
+        rejected: 'rejected',
+      };
+      return classByStatus[status] || 'queue';
+    }
+
+    function getBadgeClass(status) {
+      if (status === 'awaiting_approval') return 'badge spec';
+      if (status === 'completed') return 'badge ship';
+      if (status === 'failed' || status === 'rejected' || status === 'blocked') return 'badge risk';
+      return 'badge muted';
+    }
+
+    function createText(tagName, className, text) {
+      const el = document.createElement(tagName);
+      if (className) el.className = className;
+      el.textContent = text;
+      return el;
+    }
+
+    function createDetail(label, value) {
+      const item = document.createElement('span');
+      item.textContent = `${label}: ${textValue(value)}`;
+      return item;
+    }
+
+    function createDecisionButton(id, action, label, className) {
+      const button = createText('button', className, label);
+      button.type = 'button';
+      button.addEventListener('click', () => submitTaskDecision(id, action));
+      return button;
+    }
+
+    function getVisibleTasks() {
+      const status = statusFilterEl ? statusFilterEl.value : 'all';
+      const query = searchEl ? searchEl.value.trim().toLowerCase() : '';
+
+      return tasks.filter(task => {
+        const taskStatus = getTaskStatus(task);
+        const haystack = [
+          getTaskId(task),
+          getTaskTitle(task),
+          taskStatus,
+          task.executor,
+          task.role,
+          task.risk_tier,
+          task.commit_sha,
+        ].map(value => textValue(value, '').toLowerCase()).join(' ');
+        const statusMatches = status === 'all' || taskStatus === status;
+        const searchMatches = !query || haystack.includes(query);
+        return statusMatches && searchMatches;
+      });
+    }
+
+    function renderSummary(list) {
+      const counts = list.reduce((acc, task) => {
+        const status = getTaskStatus(task);
+        acc[status] = (acc[status] || 0) + 1;
+        return acc;
+      }, {});
+
+      if (summaryCards[0]) summaryCards[0].textContent = counts.awaiting_approval || 0;
+      if (summaryCards[1]) summaryCards[1].textContent = counts.running || 0;
+      if (summaryCards[2]) summaryCards[2].textContent = counts.queued || 0;
+      if (summaryCards[3]) summaryCards[3].textContent = counts.completed || 0;
+      if (summaryCards[4]) summaryCards[4].textContent = counts.blocked || 0;
+    }
+
+    function renderTasks() {
+      if (!taskListEl || !hasRenderedApiData) return;
+      const visibleTasks = getVisibleTasks();
+      taskListEl.replaceChildren();
+
+      if (taskCountEl) taskCountEl.textContent = visibleTasks.length;
+
+      if (!visibleTasks.length) {
+        const empty = createText('div', 'task-row queue', '目前沒有符合篩選條件的任務。');
+        taskListEl.appendChild(empty);
+        return;
+      }
+
+      visibleTasks.forEach(task => {
+        const id = getTaskId(task);
+        const status = getTaskStatus(task);
+        const row = document.createElement('div');
+        row.className = `task-row ${getRowClass(status)}`;
+        row.dataset.status = status;
+        row.dataset.search = `${id} ${getTaskTitle(task)} ${textValue(task.executor, '')} ${textValue(task.risk_tier, '')}`;
+
+        const top = document.createElement('div');
+        top.className = 'top';
+
+        const titleWrap = document.createElement('div');
+        titleWrap.appendChild(createText('span', getBadgeClass(status), status));
+        titleWrap.appendChild(document.createTextNode(' '));
+        titleWrap.appendChild(createText('span', 'title', getTaskTitle(task)));
+        top.appendChild(titleWrap);
+
+        const actions = document.createElement('div');
+        actions.className = 'actions';
+        if (status === 'awaiting_approval') {
+          actions.append(
+            createDecisionButton(id, 'approve', '批准', 'btn primary'),
+            createDecisionButton(id, 'reject', '退回', 'btn danger'),
+          );
+        }
+        top.appendChild(actions);
+        row.appendChild(top);
+
+        const meta = document.createElement('div');
+        meta.className = 'meta';
+        meta.append(
+          createText('span', '', `ID ${textValue(id)}`),
+          createText('span', '', `執行者 ${textValue(task.executor || task.role)}`),
+          createText('span', 'badge risk', `風險 ${textValue(task.risk_tier, 'daily')}`),
+        );
+        row.appendChild(meta);
+
+        const detailGrid = document.createElement('div');
+        detailGrid.className = 'detail-grid';
+        detailGrid.append(
+          createDetail('started_at', task.started_at),
+          createDetail('completed_at', task.completed_at),
+          createDetail('commit_sha', task.commit_sha),
+        );
+        row.appendChild(detailGrid);
+
+        taskListEl.appendChild(row);
+      });
+    }
+
+    async function fetchTasks() {
+      if (isLoadingTasks) return;
+      isLoadingTasks = true;
+      try {
+        const response = await fetch(`${apiBase}/tasks`, {
+          headers: { Accept: 'application/json' },
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const payload = await response.json();
+        tasks = normalizeTaskList(payload);
+        hasRenderedApiData = true;
+        renderSummary(tasks);
+        renderTasks();
+      } catch (error) {
+        if (typeof showToast === 'function') {
+          showToast('⚠️', '無法連到 AI_ORG API，暫時保留示範資料', true);
+        }
+      } finally {
+        isLoadingTasks = false;
+      }
+    }
+
+    async function submitTaskDecision(id, action) {
+      if (!id) return;
+      try {
+        const response = await fetch(`${apiBase}/tasks/${encodeURIComponent(id)}/${action}`, {
+          method: 'POST',
+          headers: { Accept: 'application/json' },
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        if (typeof showToast === 'function') {
+          showToast(action === 'approve' ? '✅' : '↩️', action === 'approve' ? '已批准任務' : '已退回任務');
+        }
+        await fetchTasks();
+      } catch (error) {
+        if (typeof showToast === 'function') {
+          showToast('⚠️', '任務狀態更新失敗，請稍後再試', true);
+        }
+      }
+    }
+
+    statusFilterEl.addEventListener('change', renderTasks);
+    searchEl.addEventListener('input', renderTasks);
+    fetchTasks();
+    window.setInterval(fetchTasks, 5000);
+  });
+
   function filter(e, type) {
-    document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
-    e.target.classList.add('active');
     document.querySelectorAll('.task-row').forEach(row => {
-      row.style.display = (type === 'all' || row.dataset.type === type) ? '' : 'none';
+      row.style.display = (type === 'all' || row.dataset.type === type || row.dataset.status === type) ? '' : 'none';
     });
   }
+
   function searchTasks(q) {
-    q = q.toLowerCase();
+    const query = q.toLowerCase();
     document.querySelectorAll('.task-row').forEach(row => {
       const s = (row.dataset.search || '').toLowerCase() + row.textContent.toLowerCase();
-      row.style.display = s.includes(q) ? '' : 'none';
+      row.style.display = s.includes(query) ? '' : 'none';
     });
   }
 </script>

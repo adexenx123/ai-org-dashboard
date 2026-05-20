@@ -82,6 +82,24 @@
     border-radius: 4px;
     color: var(--muted);
   }
+  .agent-section-title {
+    grid-column: 1 / -1;
+    margin: 6px 0 -4px;
+    font-size: 12px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0;
+  }
+  .agent-profile.boss { border-left: 3px solid var(--boss); }
+  .agent-profile.worker { border-left: 3px solid var(--accent); }
+  .agent-paths {
+    margin: 10px 0 0;
+    padding-left: 18px;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.55;
+  }
+  .agent-paths li { word-break: break-word; }
 
   @media (max-width: 1100px) { .agent-grid { grid-template-columns: 1fr; } }
 </style>
@@ -310,5 +328,125 @@
 </div>
 
 <script src="shared.js"></script>
+<script src="dashboard-api.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const agentsGrid = document.querySelector('.agent-grid');
+    let lastErrorToastAt = 0;
+
+    function createText(tag, className, text) {
+      const el = document.createElement(tag);
+      if (className) el.className = className;
+      el.textContent = text || '';
+      return el;
+    }
+
+    function normalizeRoles(manifest) {
+      const roles = manifest && manifest.roles ? manifest.roles : manifest;
+      if (!roles) return [];
+      if (Array.isArray(roles)) return roles.map(role => [role.name || role.id || '', role]);
+      return Object.entries(roles);
+    }
+
+    function getRoleClass(role) {
+      return role.class || role.role_class || role.level || '';
+    }
+
+    function getPaths(role) {
+      const paths = role.allowed_paths_default || role.allowedPathsDefault || role.allowed_paths || [];
+      if (Array.isArray(paths)) return paths;
+      if (typeof paths === 'string') return [paths];
+      return [];
+    }
+
+    function renderSection(title) {
+      agentsGrid.appendChild(createText('div', 'agent-section-title', title));
+    }
+
+    function renderAgentCard(key, role) {
+      const name = role.name || key || '未命名角色';
+      const engine = role.engine || role.model || role.runtime || '未設定';
+      const roleClass = getRoleClass(role);
+      const paths = getPaths(role);
+      const isBoss = String(roleClass) === '2';
+
+      const card = document.createElement('div');
+      card.className = `agent-profile active ${isBoss ? 'boss' : 'worker'}`;
+
+      const badge = createText('span', 'badge-corner', isBoss ? 'CLASS 2' : 'CLASS 3');
+      const avatar = createText('div', 'agent-ava asst', isBoss ? '🎯' : '⌨️');
+      const info = document.createElement('div');
+      info.className = 'agent-info';
+
+      info.appendChild(createText('h3', '', name));
+      info.appendChild(createText('div', 'role', `engine: ${engine}`));
+      info.appendChild(createText('div', 'desc', `class: ${roleClass || '未設定'}`));
+
+      const current = createText(
+        'div',
+        'agent-current active',
+        isBoss ? '主管角色 · 負責協調與決策' : '執行角色 · 負責交付任務',
+      );
+      info.appendChild(current);
+
+      const pathTitle = createText('div', 'agent-stat', 'allowed_paths_default');
+      pathTitle.style.marginTop = '12px';
+      pathTitle.style.color = 'var(--text)';
+      info.appendChild(pathTitle);
+
+      const list = document.createElement('ul');
+      list.className = 'agent-paths';
+      if (paths.length) {
+        paths.forEach(path => list.appendChild(createText('li', '', path)));
+      } else {
+        list.appendChild(createText('li', '', '未設定'));
+      }
+      info.appendChild(list);
+
+      card.append(badge, avatar, info);
+      return card;
+    }
+
+    function renderAgents(manifest) {
+      if (!agentsGrid) return;
+      const entries = normalizeRoles(manifest);
+      if (!entries.length) return;
+
+      const bosses = entries.filter(([, role]) => String(getRoleClass(role)) === '2');
+      const workers = entries.filter(([, role]) => String(getRoleClass(role)) === '3');
+      const others = entries.filter(([, role]) => !['2', '3'].includes(String(getRoleClass(role))));
+
+      agentsGrid.replaceChildren();
+      renderSection('Class 2 主管');
+      bosses.forEach(([key, role]) => agentsGrid.appendChild(renderAgentCard(key, role)));
+      renderSection('Class 3 執行');
+      workers.forEach(([key, role]) => agentsGrid.appendChild(renderAgentCard(key, role)));
+      if (others.length) {
+        renderSection('其他角色');
+        others.forEach(([key, role]) => agentsGrid.appendChild(renderAgentCard(key, role)));
+      }
+    }
+
+    async function refreshAgents() {
+      try {
+        const response = await fetch(`${window.API_BASE || 'http://127.0.0.1:8765'}/agents`, {
+          headers: { Accept: 'application/json' },
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        renderAgents(await response.json());
+      } catch (error) {
+        console.warn('[agents] fetch failed', error);
+        const now = Date.now();
+        if (typeof showToast === 'function' && now - lastErrorToastAt > 30000) {
+          lastErrorToastAt = now;
+          showToast('⚠️', '無法取得 AI 員工名冊，暫時保留示範資料', true);
+        }
+      }
+    }
+
+    refreshAgents();
+    window.setInterval(refreshAgents, 5000);
+  });
+</script>
 </body>
 </html>
