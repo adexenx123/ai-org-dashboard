@@ -37,9 +37,9 @@ function buildTopBar(activePage) {
       <div class="logo"><span class="dot"></span> ForgeBench <span style="color:var(--dim);font-weight:400">· AI 鍛造台</span></div>
       <nav class="nav">${navHtml}</nav>
       <div class="spacer"></div>
-      <div class="stat">所有 agent <span class="ok">● 運作中</span></div>
-      <div class="stat">待你批准 <b class="boss">4</b></div>
-      <div class="stat always">$<b>48.20</b> / $200</div>
+      <div class="stat" id="topbar-agents">—</div>
+      <div class="stat">待你批准 <b class="boss" id="topbar-pending">—</b></div>
+      <div class="stat always" id="topbar-budget">—</div>
       <div class="avatar" title="jubileecreator">J</div>
     </div>
   `;

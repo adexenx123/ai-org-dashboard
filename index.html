@@ -93,83 +93,14 @@
       <!-- Pending Approvals -->
       <div class="card">
         <div class="card-head">
-          <h3>⏳ 待你批准 <span class="en">Pending Approvals</span> <span class="count" id="pending-badge">4</span></h3>
+          <h3>⏳ 待你批准 <span class="en">Pending Approvals</span> <span class="count" id="pending-badge">0</span></h3>
           <a class="more" href="tasks.html">看全部 →</a>
         </div>
 
         <div id="approvals">
-          <div class="approval-item" data-id="spec-pdf">
-            <div class="title">匯出 PDF 按鈕 <span style="color:var(--muted);font-weight:400;font-size:12px">(Export PDF)</span></div>
-            <div class="meta">
-              <span class="badge spec">SPEC</span>
-              <span>🧠 由 <b>Planner</b> 拆解</span>
-              <span>⏱️ <b>4 小時</b></span>
-              <span class="badge cost">💸 ≈ $1.20</span>
-            </div>
-            <div class="desc">使用者在報表頁需要一鍵匯出。Planner 建議用 <code>jsPDF</code>，不需後端。3 子任務、4 測試。</div>
-            <div class="actions">
-              <button class="btn primary" onclick="approveItem('spec-pdf', '✅ 匯出 PDF 已批准，Codex 已開工')">✅ 批准規格</button>
-              <button class="btn" onclick="showToast('✏️','改規格 modal 開啟（demo）')">✏️ 改規格</button>
-              <button class="btn danger" onclick="rejectItem('spec-pdf')">❌ 不做</button>
-              <a class="btn ghost" href="tasks.html">看完整 spec →</a>
-            </div>
-          </div>
+        
 
-          <div class="approval-item" data-id="spec-pricing">
-            <div class="title">訂閱方案頁面 MVP <span style="color:var(--muted);font-weight:400;font-size:12px">(Pricing Page)</span></div>
-            <div class="meta">
-              <span class="badge spec">SPEC</span>
-              <span>🧠 由 <b>Planner</b> 拆解</span>
-              <span>⏱️ <b>8 小時</b></span>
-              <span class="badge cost">💸 ≈ $3.50</span>
-              <span class="badge risk">⚠️ GDPR 風險</span>
-            </div>
-            <div class="desc">三方案（Free/Pro/Team）+ Stripe SDK。<b style="color:var(--danger)">Constitution-keeper 標記</b>：GDPR 條款需先補。建議 v1 跳過、v2 補齊。</div>
-            <div class="actions">
-              <button class="btn primary" onclick="approveItem('spec-pricing','✅ 訂閱方案已批准（接受 GDPR 風險）')">✅ 批准（接受風險）</button>
-              <button class="btn" onclick="showToast('📜','將觸發修憲流程')">✏️ 先補 GDPR</button>
-              <button class="btn danger" onclick="rejectItem('spec-pricing')">❌ 不做</button>
-            </div>
-          </div>
-
-          <div class="approval-item shipping" data-id="ship-dark">
-            <div class="title">暗色模式切換 <span style="color:var(--muted);font-weight:400;font-size:12px">(Dark Mode)</span></div>
-            <div class="meta">
-              <span class="badge ship">SHIP</span>
-              <span>⌨️ <b>Codex</b> 實作</span>
-              <span class="badge test">🧪 12/12 通過</span>
-              <span>🧠 Claude review ✓</span>
-              <span>📦 +127 / -23</span>
-            </div>
-            <div class="desc">完成「設定 → 外觀 → 自動/亮/暗」。ThemeProvider + 5 元件 + E2E。已過硬閘門。</div>
-            <div class="actions">
-              <button class="btn primary" onclick="approveItem('ship-dark','🚀 暗色模式已上線')">🚀 Ship</button>
-              <button class="btn" onclick="showToast('👀','demo 影片載入中')">👀 Demo</button>
-              <button class="btn" onclick="showToast('📋','diff viewer 開啟')">📋 Diff</button>
-              <button class="btn danger" onclick="rejectItem('ship-dark')">🔄 退回</button>
-            </div>
-          </div>
-
-          <div class="approval-item shipping" data-id="ship-webhook">
-            <div class="title">Webhook 通知整合 <span style="color:var(--muted);font-weight:400;font-size:12px">(Webhooks)</span></div>
-            <div class="meta">
-              <span class="badge ship">SHIP</span>
-              <span>⌨️ <b>Codex</b> 實作</span>
-              <span class="badge test">🧪 18/18 通過</span>
-              <span>🧠 Claude review ✓</span>
-              <span>📦 +302 / -8</span>
-            </div>
-            <div class="desc">Slack / Discord / Email 三種 webhook，含簽章驗證、retry、rate-limit。</div>
-            <div class="actions">
-              <button class="btn primary" onclick="approveItem('ship-webhook','🚀 Webhook 已上線')">🚀 Ship</button>
-              <button class="btn" onclick="showToast('👀','demo 載入')">👀 Demo</button>
-              <button class="btn" onclick="showToast('📋','diff viewer 開啟')">📋 Diff</button>
-              <button class="btn danger" onclick="rejectItem('ship-webhook')">🔄 退回</button>
-            </div>
-          </div>
-        </div>
-
-        <div id="approvals-empty" style="display:none; text-align:center; padding:30px; color:var(--muted)">
+        <div id="approvals-empty" style="display:block; text-align:center; padding:30px; color:var(--muted)">
           🎉 全部處理完了！Inbox zero. 享受你的策略時間吧。
         </div>
       </div>
@@ -262,15 +193,8 @@
           <h3>🤖 AI 員工狀態 <span class="en">Agent Roster</span> <span class="count ok">8 active</span></h3>
           <a class="more" href="agents.html">詳情 →</a>
         </div>
-        <div class="agents">
-          <div class="agent active"><div class="icon">🎯</div><div class="body"><div class="name">CEO-orchestrator <span class="status-dot"></span></div><div class="status">監聽中</div></div></div>
-          <div class="agent active"><div class="icon">🔍</div><div class="body"><div class="name">Planner <span class="status-dot"></span></div><div class="status">拆通知系統</div></div></div>
-          <div class="agent active"><div class="icon">⌨️</div><div class="body"><div class="name">Frontend <span class="status-dot"></span></div><div class="status">寫卡片元件</div></div></div>
-          <div class="agent active"><div class="icon">🔧</div><div class="body"><div class="name">Backend <span class="status-dot"></span></div><div class="status">寫 auth middleware</div></div></div>
-          <div class="agent active"><div class="icon">🧪</div><div class="body"><div class="name">QA <span class="status-dot"></span></div><div class="status">E2E 8/15</div></div></div>
-          <div class="agent active"><div class="icon">🛡️</div><div class="body"><div class="name">Constitution-keeper <span class="status-dot"></span></div><div class="status">守衛中</div></div></div>
-          <div class="agent idle"><div class="icon">📋</div><div class="body"><div class="name">Task <span class="status-dot"></span></div><div class="status">閒置</div></div></div>
-          <div class="agent idle"><div class="icon">💬</div><div class="body"><div class="name">Assistant <span class="status-dot"></span></div><div class="status">閒置</div></div></div>
+        <div class="agents" id="agents-grid">
+        </div>
         </div>
       </div>
 
