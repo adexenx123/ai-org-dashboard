@@ -1,4 +1,5 @@
-/* AI_ORG shared interactions */
+/* ForgeBench｜AI 鍛造台 — shared interactions
+   (internal slug: ai-org-pages / AI_ORG / ai-org-runtime) */
 
 function showToast(icon, msg, isError = false) {
   let toast = document.getElementById('toast');
@@ -33,7 +34,7 @@ function buildTopBar(activePage) {
 
   return `
     <div class="topbar">
-      <div class="logo"><span class="dot"></span> AI_ORG <span style="color:var(--dim);font-weight:400">· StarMaps</span></div>
+      <div class="logo"><span class="dot"></span> ForgeBench <span style="color:var(--dim);font-weight:400">· AI 鍛造台</span></div>
       <nav class="nav">${navHtml}</nav>
       <div class="spacer"></div>
       <div class="stat">所有 agent <span class="ok">● 運作中</span></div>

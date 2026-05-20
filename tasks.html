@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
-<title>AI_ORG · 任務 (Tasks)</title>
+<title>ForgeBench · 任務 (Tasks)</title>
 <link rel="stylesheet" href="styles.css">
 <style>
   .summary-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 18px; }
@@ -483,7 +483,7 @@
         renderTasks();
       } catch (error) {
         if (typeof showToast === 'function') {
-          showToast('⚠️', '無法連到 AI_ORG API，暫時保留示範資料', true);
+          showToast('⚠️', '無法連到 ForgeBench API，暫時保留示範資料', true);
         }
       } finally {
         isLoadingTasks = false;

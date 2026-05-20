@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
-<title>AI_ORG · 憲法 (Constitution)</title>
+<title>ForgeBench · 憲法 (Constitution)</title>
 <link rel="stylesheet" href="styles.css">
 <style>
   .const-layout { display: grid; grid-template-columns: 260px 1fr; gap: 18px; }
@@ -31,17 +31,17 @@
   }
   .const-item:hover { background: var(--panel-2); color: var(--text); }
   .const-item.active { background: var(--border); color: var(--text); font-weight: 600; }
-    .const-item .num { font-family: ui-monospace, monospace; font-size: 11px; color: var(--accent); }
-    .const-loading {
-      color: var(--muted);
-      font-size: 13px;
-      padding: 8px 10px;
-    }
+  .const-item .num { font-family: ui-monospace, monospace; font-size: 11px; color: var(--accent); }
+  .const-loading {
+    color: var(--muted);
+    font-size: 13px;
+    padding: 8px 10px;
+  }
 
-    .article-content {
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 12px;
+  .article-content {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
     padding: 28px 32px;
     min-height: 600px;
   }
@@ -187,12 +187,12 @@
       <div class="article-meta"><span>正在讀取 <code>/constitution</code></span></div>
       <p>系統會先嘗試讀取 API；如果後端端點尚未完成，會保留示範條文。</p>
     </div>
-    </div>
   </div>
+</div>
 
-  <script src="shared.js"></script>
-  <script src="dashboard-api.js"></script>
-  <script>
+<script src="shared.js"></script>
+<script src="dashboard-api.js"></script>
+<script>
     const fallbackConstitution = {
       version: 'mock-v0.4.0',
       files: [
@@ -308,7 +308,7 @@
       nav.innerHTML = `<h4>📜 憲法條文 (${count})</h4>`;
       display.innerHTML = `
         <div class="article-num">CONSTITUTION</div>
-        <h2>AI_ORG 憲法 <span class="en">${escapeHtml(sourceLabel)}</span></h2>
+        <h2>ForgeBench 憲法 <span class="en">${escapeHtml(sourceLabel)}</span></h2>
         <div class="article-meta">
           <span>📦 版本 <b><code>${escapeHtml(version || 'unknown')}</code></b></span>
           <span>📂 來源 <code>/constitution</code></span>
@@ -369,6 +369,6 @@
     }
 
     loadConstitution();
-  </script>
+</script>
 </body>
 </html>

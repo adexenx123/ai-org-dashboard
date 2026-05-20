@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
-<title>AI_ORG · 設定 (Settings)</title>
+<title>ForgeBench · 設定 (Settings)</title>
 <link rel="stylesheet" href="styles.css">
 <style>
   .settings-layout { display: grid; grid-template-columns: 220px 1fr; gap: 18px; }
@@ -378,7 +378,7 @@
         <h2>🔐 安全 <span class="en">Security</span></h2>
         <div class="section-desc">機密與權限</div>
         <div class="setting-row">
-          <div class="info"><div class="label">GitHub PAT 狀態</div><div class="hint">用於 Codex 提交、AI_ORG submodule</div></div>
+          <div class="info"><div class="label">GitHub PAT 狀態</div><div class="hint">用於 Codex 提交、AI_ORG submodule(ForgeBench 憲法 SSOT)</div></div>
           <div style="color:var(--danger);font-size:12.5px">⚠️ 明文未輪換 · <a href="#" style="color:var(--accent)">立刻處理</a></div>
         </div>
         <div class="setting-row">
@@ -567,7 +567,7 @@
       } catch (error) {
         console.warn('[settings] fetch failed', error);
         setHealth('danger', '連線失敗');
-        showFetchError('無法取得 AI_ORG API 狀態，暫時保留既有設定畫面');
+        showFetchError('無法取得 ForgeBench API 狀態，暫時保留既有設定畫面');
       } finally {
         els.refresh.classList.remove('loading');
         els.refresh.textContent = '重新整理';
