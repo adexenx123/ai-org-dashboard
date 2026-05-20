@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>ForgeBench · 專案 (Projects)</title>
+<link rel="stylesheet" href="styles.css">
+<script src="shared.js" defer></script>
+<script src="dashboard-api.js" defer></script>
+</head>
+<body>
+<div id="topbar-slot" data-active="projects"></div>
+
+<div class="container">
+  <div class="hero">
+    <h1>📁 專案 <span class="greet">Projects · 你正在鍛造的所有產品</span></h1>
+    <div class="date" id="project-count">同步中...</div>
+  </div>
+
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px">
+    <div style="color:var(--muted);font-size:13px">切換 active project 只會更新本機顯示；任務仍使用 spec 裡的 target_project。</div>
+    <button class="btn boss" id="new-project-btn" type="button">+ 新增專案</button>
+  </div>
+
+  <div id="projects-empty" class="card" style="padding:30px;text-align:center;color:var(--muted);font-size:13px">
+    載入專案中...
+  </div>
+  <div id="projects-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px"></div>
+</div>
+
+<div id="project-modal" style="display:none;position:fixed;inset:0;background:rgba(2,6,23,0.72);z-index:80;align-items:center;justify-content:center;padding:18px" role="dialog" aria-modal="true" aria-labelledby="project-modal-title">
+  <form id="project-form" class="card" style="width:min(560px,100%);margin:0">
+    <div class="card-head">
+      <h3 id="project-modal-title">+ 新增專案 <span class="en">Create Project</span></h3>
+      <button class="btn ghost" id="close-project-modal" type="button">關閉</button>
+    </div>
+    <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:12px">
+      名稱
+      <input id="project-name" name="name" required style="display:block;width:100%;margin-top:6px;background:var(--panel-2);border:1px solid var(--border-soft);border-radius:6px;color:var(--text);padding:9px 11px;font-family:inherit">
+    </label>
+    <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:12px">
+      slug
+      <input id="project-slug" name="slug" required pattern="[a-z0-9][a-z0-9-]*" placeholder="my-product" style="display:block;width:100%;margin-top:6px;background:var(--panel-2);border:1px solid var(--border-soft);border-radius:6px;color:var(--text);padding:9px 11px;font-family:inherit">
+    </label>
+    <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:12px">
+      模式
+      <select id="project-mode" name="mode" style="display:block;width:100%;margin-top:6px;background:var(--panel-2);border:1px solid var(--border-soft);border-radius:6px;color:var(--text);padding:9px 11px;font-family:inherit">
+        <option value="created">created</option>
+        <option value="adopted">adopted</option>
+      </select>
+    </label>
+    <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:14px">
+      描述
+      <textarea id="project-description" name="description" rows="4" style="display:block;width:100%;margin-top:6px;background:var(--panel-2);border:1px solid var(--border-soft);border-radius:6px;color:var(--text);padding:9px 11px;font-family:inherit;resize:vertical"></textarea>
+    </label>
+    <div style="display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap">
+      <button class="btn ghost" type="button" id="cancel-project-btn">取消</button>
+      <button class="btn boss" type="submit" id="save-project-btn">建立專案</button>
+    </div>
+  </form>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const apiBase = (new URLSearchParams(location.search).get("api") || window.API_BASE || "http://127.0.0.1:8080").replace(/\/+$/, "");
+    const params = new URLSearchParams(location.search);
+    const activeFromQuery = params.get('active');
+    const grid = document.getElementById('projects-grid');
+    const empty = document.getElementById('projects-empty');
+    const count = document.getElementById('project-count');
+    const modal = document.getElementById('project-modal');
+    const form = document.getElementById('project-form');
+    const saveButton = document.getElementById('save-project-btn');
+
+    if (activeFromQuery) localStorage.setItem('forge.activeProject', activeFromQuery);
+
+    function text(value, fallback = '-') {
+      if (value === null || value === undefined || value === '') return fallback;
+      return String(value);
+    }
+
+    function normalizeProjectList(payload) {
+      if (Array.isArray(payload)) return payload;
+      if (Array.isArray(payload.projects)) return payload.projects;
+      if (Array.isArray(payload.data)) return payload.data;
+      return [];
+    }
+
+    function currentActiveSlug() {
+      return localStorage.getItem('forge.activeProject') || 'default';
+    }
+
+    function setTopbarProject(slug) {
+      const pill = document.getElementById('topbar-active-project');
+      if (pill) pill.textContent = slug;
+    }
+
+    setTopbarProject(currentActiveSlug());
+
+    function setEmpty(message, isVisible = true) {
+      empty.textContent = message;
+      empty.style.display = isVisible ? 'block' : 'none';
+    }
+
+    function openModal() {
+      modal.style.display = 'flex';
+      document.getElementById('project-name').focus();
+    }
+
+    function closeModal() {
+      modal.style.display = 'none';
+      form.reset();
+    }
+
+    function renderProjects(projects) {
+      grid.replaceChildren();
+      const activeSlug = currentActiveSlug();
+      count.textContent = `${projects.length} 個專案`;
+      setEmpty(projects.length ? '' : '尚無專案。按「+ 新增專案」建立第一個產品。', projects.length === 0);
+
+      projects.forEach(project => {
+        const slug = text(project.slug || project.id || project.name, 'default');
+        const isActive = slug === activeSlug || slug === activeFromQuery;
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.dataset.slug = slug;
+        card.style.borderColor = isActive ? 'var(--accent)' : 'var(--border)';
+        card.style.boxShadow = isActive ? '0 0 0 1px var(--accent), 0 2px 8px rgba(0,0,0,0.25)' : '';
+
+        const head = document.createElement('div');
+        head.className = 'card-head';
+        const title = document.createElement('h3');
+        title.textContent = text(project.name, slug);
+        const mode = document.createElement('span');
+        mode.className = project.mode === 'adopted' ? 'badge cost' : 'badge test';
+        mode.textContent = text(project.mode, 'created');
+        head.append(title, mode);
+
+        const body = document.createElement('div');
+        body.style.cssText = 'font-size:12.5px;color:var(--muted);line-height:1.8';
+        body.innerHTML = `
+          <div>slug <code></code></div>
+          <div data-field="description"></div>
+          <div data-field="created"></div>
+        `;
+        body.querySelector('code').textContent = slug;
+        body.querySelector('[data-field="description"]').textContent = text(project.description, '沒有描述');
+        body.querySelector('[data-field="created"]').textContent = `created_at ${text(project.created_at || project.createdAt)}`;
+
+        const actions = document.createElement('div');
+        actions.style.cssText = 'display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:14px;flex-wrap:wrap';
+        const activeBadge = document.createElement('span');
+        activeBadge.className = 'badge muted';
+        activeBadge.textContent = isActive ? 'active' : 'inactive';
+        const enter = document.createElement('button');
+        enter.className = 'btn primary';
+        enter.type = 'button';
+        enter.textContent = '進入 →';
+        enter.addEventListener('click', () => {
+          localStorage.setItem('forge.activeProject', slug);
+          location.href = 'index.html';
+        });
+        actions.append(activeBadge, enter);
+
+        card.append(head, body, actions);
+        grid.appendChild(card);
+
+        if (isActive) {
+          window.setTimeout(() => card.scrollIntoView({ block: 'center', behavior: 'smooth' }), 80);
+        }
+      });
+
+      setTopbarProject(currentActiveSlug());
+    }
+
+    async function loadProjects() {
+      try {
+        setEmpty('載入專案中...');
+        const payload = await listProjects(apiBase);
+        renderProjects(normalizeProjectList(payload));
+      } catch (error) {
+        console.warn('[projects] list failed', error);
+        count.textContent = '等候連線';
+        setEmpty('等候連線中...');
+        showToast('⚠️', '無法載入專案列表，等候連線中...', true);
+      }
+    }
+
+    document.getElementById('new-project-btn').addEventListener('click', openModal);
+    document.getElementById('close-project-modal').addEventListener('click', closeModal);
+    document.getElementById('cancel-project-btn').addEventListener('click', closeModal);
+    modal.addEventListener('click', event => {
+      if (event.target === modal) closeModal();
+    });
+    document.getElementById('project-name').addEventListener('input', event => {
+      const slugInput = document.getElementById('project-slug');
+      if (slugInput.value.trim()) return;
+      slugInput.value = event.target.value.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    });
+    form.addEventListener('submit', async event => {
+      event.preventDefault();
+      const payload = {
+        name: document.getElementById('project-name').value.trim(),
+        slug: document.getElementById('project-slug').value.trim(),
+        mode: document.getElementById('project-mode').value,
+        description: document.getElementById('project-description').value.trim(),
+      };
+      if (!payload.name || !payload.slug) return showToast('⚠️', '請填寫專案名稱與 slug', true);
+
+      saveButton.disabled = true;
+      saveButton.textContent = '建立中...';
+      try {
+        const created = await createProject(apiBase, payload);
+        const slug = text(created.slug || created.project?.slug || payload.slug);
+        localStorage.setItem('forge.activeProject', slug);
+        showToast('✅', '專案已建立');
+        const next = new URL(location.href);
+        next.searchParams.set('active', slug);
+        location.href = `${next.pathname}${next.search}`;
+      } catch (error) {
+        console.warn('[projects] create failed', error);
+        showToast('⚠️', error.message || '建立專案失敗，請稍後再試', true);
+      } finally {
+        saveButton.disabled = false;
+        saveButton.textContent = '建立專案';
+      }
+    });
+
+    loadProjects();
+  });
+</script>
+</body>
+</html>

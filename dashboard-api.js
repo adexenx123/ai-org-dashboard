@@ -61,6 +61,28 @@ async function fetchDashboardSnapshot() {
   return { approvals, agents };
 }
 
+async function listProjects(apiBase) {
+  const r = await fetch(`${apiBase}/projects`);
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
+}
+
+async function createProject(apiBase, payload) {
+  const r = await fetch(`${apiBase}/projects`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    throw Object.assign(new Error(data.detail || `HTTP ${r.status}`), {
+      status: r.status,
+      data,
+    });
+  }
+  return data;
+}
+
 function pollDashboard(intervalMs = 5000, onData) {
   let stopped = false;
   let timerId = null;
@@ -88,4 +110,6 @@ function pollDashboard(intervalMs = 5000, onData) {
 window.API_BASE = API_BASE;
 window.fetchAwaitingApproval = fetchAwaitingApproval;
 window.fetchAgents = fetchAgents;
+window.listProjects = listProjects;
+window.createProject = createProject;
 window.pollDashboard = pollDashboard;

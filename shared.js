@@ -26,6 +26,7 @@ function buildTopBar(activePage) {
     { id: 'agents',       label: 'AI 員工',  en: 'Agents' },
     { id: 'history',      label: '歷史',     en: 'History' },
     { id: 'constitution', label: '憲法',     en: 'Constitution' },
+    { id: 'projects',     label: '專案',     en: 'Projects' },
     { id: 'settings',     label: '設定',     en: 'Settings' },
   ];
   const navHtml = pages.map(p =>
@@ -34,7 +35,7 @@ function buildTopBar(activePage) {
 
   return `
     <div class="topbar">
-      <div class="logo"><span class="dot"></span> ForgeBench <span style="color:var(--dim);font-weight:400">· AI 鍛造台</span></div>
+      <div class="logo"><span class="dot"></span> ForgeBench <span style="color:var(--dim);font-weight:400">· AI 鍛造台</span><span class="active-project" id="topbar-active-project" style="font-size:11px;color:var(--accent);padding:2px 8px;border:1px solid var(--accent);border-radius:99px;margin-left:6px">default</span></div>
       <nav class="nav">${navHtml}</nav>
       <div class="spacer"></div>
       <div class="stat" id="topbar-agents">—</div>
@@ -50,4 +51,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (slot) {
     slot.outerHTML = buildTopBar(slot.dataset.active);
   }
+  const slug = localStorage.getItem('forge.activeProject') || 'default';
+  const el = document.getElementById('topbar-active-project');
+  if (el) el.textContent = slug;
 });

@@ -242,10 +242,18 @@
             <button class="btn" onclick="quickAsk('那 v2 backlog 什麼時候做？')">v2 何時做</button>
             <button class="btn" onclick="quickAsk('再給我看一次摘要')">看摘要</button>
             <button class="btn" onclick="quickAsk('召集 Backend 一起看')">+ 召集</button>
+            <button class="btn ghost" id="forge-bootstrap-toggle" onclick="document.getElementById('forge-bootstrap-zone').style.display='block'">+ 建專案</button>
           </div>
           <div style="display:flex;gap:8px;align-items:center">
             <span class="hint">Enter 送出 · Shift+Enter 換行</span>
             <button class="btn boss" id="send-btn" onclick="sendMsg()">送出</button>
+          </div>
+        </div>
+        <div id="forge-bootstrap-zone" style="margin-top:16px;display:none">
+          <div style="padding:16px;border:1px solid var(--accent);border-radius:8px;background:var(--panel-2)">
+            <h3 style="margin:0 0 6px;font-size:14px">✨ 看起來是一個新產品</h3>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:10px">想用 ForgeBench 鍛造它嗎?</div>
+            <button class="btn boss" id="forge-bootstrap-btn">📁 建立此專案</button>
           </div>
         </div>
       </div>
@@ -282,9 +290,33 @@
   </div>
 </div>
 
+<div id="forge-bootstrap-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1000;align-items:center;justify-content:center">
+  <div style="background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:24px;max-width:480px;width:90%">
+    <h3 style="margin-top:0">建立新專案</h3>
+    <form id="forge-bootstrap-form">
+      <label style="display:block;margin-top:10px;font-size:12px;color:var(--muted)">專案名稱<input id="forge-bs-name" placeholder="例:訂閱方案頁面 MVP" required style="display:block;width:100%;margin-top:4px;background:var(--panel-2);border:1px solid var(--border-soft);border-radius:6px;color:var(--text);padding:8px;font-family:inherit"></label>
+      <label style="display:block;margin-top:10px;font-size:12px;color:var(--muted)">Slug(kebab-case,英數+連字符)<input id="forge-bs-slug" placeholder="pricing-page-mvp" pattern="^[a-z][a-z0-9-]{1,40}$" required style="display:block;width:100%;margin-top:4px;background:var(--panel-2);border:1px solid var(--border-soft);border-radius:6px;color:var(--text);padding:8px;font-family:inherit"></label>
+      <label style="display:block;margin-top:10px;font-size:12px;color:var(--muted)">描述<textarea id="forge-bs-desc" rows="2" placeholder="一句話描述" style="display:block;width:100%;margin-top:4px;background:var(--panel-2);border:1px solid var(--border-soft);border-radius:6px;color:var(--text);padding:8px;font-family:inherit;resize:vertical"></textarea></label>
+      <label style="display:block;margin-top:10px;font-size:12px;color:var(--muted)">模式
+        <select id="forge-bs-mode" style="display:block;width:100%;margin-top:4px;background:var(--panel-2);border:1px solid var(--border-soft);border-radius:6px;color:var(--text);padding:8px;font-family:inherit">
+          <option value="create">create — 建新空專案</option>
+          <option value="adopt">adopt — 指向既有 git repo</option>
+        </select>
+      </label>
+      <label id="forge-bs-path-label" style="display:none;margin-top:10px;font-size:12px;color:var(--muted)">既有 repo 路徑<input id="forge-bs-path" placeholder="~/Documents/your-repo" style="display:block;width:100%;margin-top:4px;background:var(--panel-2);border:1px solid var(--border-soft);border-radius:6px;color:var(--text);padding:8px;font-family:inherit"></label>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+        <button type="button" class="btn ghost" id="forge-bs-cancel">取消</button>
+        <button type="submit" class="btn boss" id="forge-bs-submit">✨ 建立並開始</button>
+      </div>
+      <div id="forge-bs-error" style="color:var(--err);font-size:12px;margin-top:8px;display:none"></div>
+    </form>
+  </div>
+</div>
+
 <script src="shared.js"></script>
 <script>
   const DEFAULT_API_BASE = 'http://127.0.0.1:8080';
+  const apiBase = (new URLSearchParams(location.search).get("api") || window.API_BASE || "http://127.0.0.1:8080").replace(/\/+$/, "");
   const chatState = {
     history: [],
     isSending: false,
@@ -300,6 +332,69 @@
   function quickAsk(text) {
     document.getElementById('msg-input').value = text;
     document.getElementById('msg-input').focus();
+  }
+
+  function openForgeBootstrapModal() {
+    const modal = document.getElementById('forge-bootstrap-modal');
+    const error = document.getElementById('forge-bs-error');
+    if (error) {
+      error.textContent = '';
+      error.style.display = 'none';
+    }
+    modal.style.display = 'flex';
+    document.getElementById('forge-bs-name').focus();
+  }
+
+  function closeForgeBootstrapModal() {
+    document.getElementById('forge-bootstrap-modal').style.display = 'none';
+  }
+
+  function syncForgePathField() {
+    const mode = document.getElementById('forge-bs-mode').value;
+    document.getElementById('forge-bs-path-label').style.display = mode === 'adopt' ? 'block' : 'none';
+  }
+
+  function slugifyProjectName(name) {
+    return name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-').replace(/^-|-$/g, '').slice(0, 41);
+  }
+
+  async function submitForgeBootstrap(event) {
+    event.preventDefault();
+    const error = document.getElementById('forge-bs-error');
+    const submit = document.getElementById('forge-bs-submit');
+    const name = document.getElementById('forge-bs-name').value.trim();
+    const slug = document.getElementById('forge-bs-slug').value.trim();
+    const description = document.getElementById('forge-bs-desc').value.trim();
+    const mode = document.getElementById('forge-bs-mode').value;
+    const path = document.getElementById('forge-bs-path').value.trim();
+    const payload = { name, slug, description, mode };
+    if (mode === 'adopt') payload.existing_path = path;
+
+    error.style.display = 'none';
+    submit.disabled = true;
+    try {
+      const resp = await fetch(`${apiBase}/projects`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (resp.status === 202) {
+        const data = await resp.json();
+        showToast('✅', `已建立 ${data.slug}`);
+        closeForgeBootstrapModal();
+        location.href = `projects.html?active=${encodeURIComponent(data.slug)}`;
+        return;
+      }
+      const err = await resp.json().catch(() => ({}));
+      error.textContent = err.detail || `HTTP ${resp.status}`;
+      error.style.display = 'block';
+    } catch (err) {
+      error.textContent = err.message || '無法建立專案';
+      error.style.display = 'block';
+      showToast('⚠️', '建立專案失敗，請稍後再試', true);
+    } finally {
+      submit.disabled = false;
+    }
   }
 
   async function sendMsg() {
@@ -484,6 +579,20 @@
       e.preventDefault();
       sendMsg();
     }
+  });
+  document.getElementById('forge-bootstrap-btn').addEventListener('click', openForgeBootstrapModal);
+  document.getElementById('forge-bs-cancel').addEventListener('click', closeForgeBootstrapModal);
+  document.getElementById('forge-bs-mode').addEventListener('change', syncForgePathField);
+  document.getElementById('forge-bootstrap-form').addEventListener('submit', submitForgeBootstrap);
+  document.getElementById('forge-bootstrap-modal').addEventListener('click', e => {
+    if (e.target.id === 'forge-bootstrap-modal') closeForgeBootstrapModal();
+  });
+  document.getElementById('forge-bs-name').addEventListener('input', e => {
+    const slugInput = document.getElementById('forge-bs-slug');
+    if (!slugInput.dataset.touched) slugInput.value = slugifyProjectName(e.target.value);
+  });
+  document.getElementById('forge-bs-slug').addEventListener('input', e => {
+    e.target.dataset.touched = 'true';
   });
   // Auto-scroll on load
   document.addEventListener('DOMContentLoaded', () => {
