@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>AI_ORG · 歷史 (History)</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+  .tabs { display: flex; gap: 4px; margin-bottom: 18px; border-bottom: 1px solid var(--border); }
+  .tab { padding: 10px 16px; cursor: pointer; color: var(--muted); border-bottom: 2px solid transparent; font-size: 13px; }
+  .tab.active { color: var(--text); border-bottom-color: var(--accent); font-weight: 600; }
+  .tab:hover { color: var(--text); }
+
+  .timeline { position: relative; padding-left: 26px; }
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 8px; top: 0; bottom: 0;
+    width: 2px; background: var(--border);
+  }
+  .tl-event {
+    position: relative;
+    margin-bottom: 16px;
+    background: var(--panel-2);
+    border: 1px solid var(--border-soft);
+    border-radius: 8px;
+    padding: 12px 16px;
+  }
+  .tl-event::before {
+    content: '';
+    position: absolute;
+    left: -22px; top: 16px;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 3px solid var(--bg);
+    box-shadow: 0 0 0 1px var(--accent);
+  }
+  .tl-event.ship::before { background: var(--ok); box-shadow: 0 0 0 1px var(--ok); }
+  .tl-event.decision::before { background: var(--boss); box-shadow: 0 0 0 1px var(--boss); }
+  .tl-event.const::before { background: var(--accent-2); box-shadow: 0 0 0 1px var(--accent-2); }
+  .tl-event.failure::before { background: var(--danger); box-shadow: 0 0 0 1px var(--danger); }
+  .tl-event .tl-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+  .tl-event .tl-title { font-weight: 600; font-size: 13.5px; }
+  .tl-event .tl-time { font-size: 11px; color: var(--dim); white-space: nowrap; }
+  .tl-event .tl-meta { font-size: 11.5px; color: var(--muted); margin-top: 4px; }
+  .tl-event .tl-body { font-size: 12.5px; color: var(--muted); margin-top: 8px; line-height: 1.55; }
+
+  .day-header {
+    font-size: 12px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin: 20px 0 10px;
+    padding-left: 4px;
+    font-weight: 600;
+  }
+  .day-header:first-child { margin-top: 0; }
+</style>
+</head>
+<body>
+<div id="topbar-slot" data-active="history"></div>
+
+<div class="container">
+  <div class="hero">
+    <h1>📚 歷史 <span class="greet">History · Decisions, ships, learnings</span></h1>
+    <div class="date">追蹤所有重要事件 · 自 2026-04-12 起</div>
+  </div>
+
+  <div class="summary-row" style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:18px">
+    <div class="card" style="padding:14px"><div style="font-size:11.5px;color:var(--muted)">已 ship 功能</div><div style="font-size:22px;font-weight:700;color:var(--ok)">47</div></div>
+    <div class="card" style="padding:14px"><div style="font-size:11.5px;color:var(--muted)">重大決策</div><div style="font-size:22px;font-weight:700;color:var(--boss)">18</div></div>
+    <div class="card" style="padding:14px"><div style="font-size:11.5px;color:var(--muted)">修憲次數</div><div style="font-size:22px;font-weight:700;color:var(--accent-2)">5</div></div>
+    <div class="card" style="padding:14px"><div style="font-size:11.5px;color:var(--muted)">學到的坑</div><div style="font-size:22px;font-weight:700;color:var(--danger)">12</div></div>
+    <div class="card" style="padding:14px"><div style="font-size:11.5px;color:var(--muted)">Git commits</div><div style="font-size:22px;font-weight:700">312</div></div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab(event, 'all')">📜 全部</div>
+    <div class="tab" onclick="switchTab(event, 'ship')">🚀 上線</div>
+    <div class="tab" onclick="switchTab(event, 'decision')">⚖️ 決策</div>
+    <div class="tab" onclick="switchTab(event, 'const')">📜 修憲</div>
+    <div class="tab" onclick="switchTab(event, 'failure')">🪤 踩坑</div>
+  </div>
+
+  <div class="grid">
+    <div class="col">
+
+      <div class="day-header">📅 今天 · 2026-05-20</div>
+      <div class="timeline" data-day="today">
+        <div class="tl-event failure" data-type="failure">
+          <div class="tl-head">
+            <div>
+              <div class="tl-title">🪤 codex exec headless 卡死 (8.5 小時)</div>
+              <div class="tl-meta">教訓寫入 CLAUDE.md「踩過的坑」</div>
+            </div>
+            <div class="tl-time">凌晨 02:00</div>
+          </div>
+          <div class="tl-body">
+            根因：<code>-c approval_policy='"never"'</code> 嵌套引號被吃掉 → 互動 approval 死等。已加入派工檢核清單：prompt 寫檔、<code>&lt;/dev/null</code>、用 <code>tee</code>、硬 timeout。
+          </div>
+        </div>
+        <div class="tl-event decision" data-type="decision">
+          <div class="tl-head">
+            <div>
+              <div class="tl-title">⚖️ 決策：訂閱方案 v1 跳過 GDPR</div>
+              <div class="tl-meta">由 CEO 批准 · 5 角色討論</div>
+            </div>
+            <div class="tl-time">08:48</div>
+          </div>
+          <div class="tl-body">
+            選項 A 中標。GDPR 補齊放 v2 backlog (BL-204)。Constitution-keeper 標記為 risk-accepted。
+          </div>
+        </div>
+      </div>
+
+      <div class="day-header">📅 昨天 · 2026-05-19</div>
+      <div class="timeline" data-day="yesterday">
+        <div class="tl-event ship" data-type="ship">
+          <div class="tl-head">
+            <div>
+              <div class="tl-title">🚀 i18n 中英切換已上線</div>
+              <div class="tl-meta">by Codex · commit <code>a4f8e2c</code></div>
+            </div>
+            <div class="tl-time">17:48</div>
+          </div>
+          <div class="tl-body">
+            支援 4 語言（zh-TW/en/ja/ko），自動偵測瀏覽器語言。+428 / -32 行。E2E 全綠。
+          </div>
+        </div>
+        <div class="tl-event const" data-type="const">
+          <div class="tl-head">
+            <div>
+              <div class="tl-title">📜 憲法修訂 v0.4.0</div>
+              <div class="tl-meta">新增 §05 外部部署規範條款</div>
+            </div>
+            <div class="tl-time">14:22</div>
+          </div>
+          <div class="tl-body">
+            觸發原因：Cloudflare html_handling 踩坑。新增規定「託管 SPA 時，公開資料夾的 .html 檔須保留原樣（html_handling = "none"）」。
+            指紋從 <code>2268d1d</code> → <code>9ebdfb8</code>。三檔投影已對齊。
+          </div>
+        </div>
+        <div class="tl-event decision" data-type="decision">
+          <div class="tl-head">
+            <div>
+              <div class="tl-title">⚖️ 決策：Codex 升級到 0.130.0</div>
+              <div class="tl-meta">由 CEO 批准 · blocker 解除</div>
+            </div>
+            <div class="tl-time">11:15</div>
+          </div>
+          <div class="tl-body">
+            Smoke test 通過 → Phase 1 介接公式定案：<br>
+            <code>codex exec -s workspace-write -c approval_policy=never &lt; prompt.txt &lt;/dev/null | tee log</code>
+          </div>
+        </div>
+      </div>
+
+      <div class="day-header">📅 兩天前 · 2026-05-18</div>
+      <div class="timeline">
+        <div class="tl-event ship" data-type="ship">
+          <div class="tl-head">
+            <div>
+              <div class="tl-title">🚀 登入頁面（含 Google OAuth）已上線</div>
+              <div class="tl-meta">by Codex · commit <code>7d2a91b</code></div>
+            </div>
+            <div class="tl-time">14:22</div>
+          </div>
+          <div class="tl-body">
+            JWT auth + Google OAuth + 記住我。15 個 E2E 測試全綠。+812 / -45 行。
+          </div>
+        </div>
+        <div class="tl-event failure" data-type="failure">
+          <div class="tl-head">
+            <div>
+              <div class="tl-title">🪤 Cloudflare html_handling 預設破壞 SEO 驗證檔</div>
+              <div class="tl-meta">已修 + 寫入憲法</div>
+            </div>
+            <div class="tl-time">11:30</div>
+          </div>
+          <div class="tl-body">
+            GSC 驗證檔 307 redirect → 404。修法：<code>html_handling = "none"</code>。
+          </div>
+        </div>
+      </div>
+
+      <div class="day-header">📅 三天前 · 2026-05-17</div>
+      <div class="timeline">
+        <div class="tl-event ship" data-type="ship">
+          <div class="tl-head">
+            <div>
+              <div class="tl-title">🚀 使用者 Profile 編輯</div>
+              <div class="tl-meta">by Codex · commit <code>3b4c8d1</code></div>
+            </div>
+            <div class="tl-time">11:05</div>
+          </div>
+          <div class="tl-body">頭像上傳 + 暱稱 / bio + 密碼修改。+356 / -89 行。</div>
+        </div>
+      </div>
+
+      <div class="day-header">📅 四天前 · 2026-05-16</div>
+      <div class="timeline">
+        <div class="tl-event ship" data-type="ship">
+          <div class="tl-head">
+            <div>
+              <div class="tl-title">🚀 資料庫 schema v2.3</div>
+              <div class="tl-meta">by Codex · zero-downtime migration</div>
+            </div>
+            <div class="tl-time">09:30</div>
+          </div>
+          <div class="tl-body">新增 subscriptions / billing 表，向後相容。</div>
+        </div>
+        <div class="tl-event const" data-type="const">
+          <div class="tl-head">
+            <div>
+              <div class="tl-title">📜 憲法修訂 v0.3.5</div>
+              <div class="tl-meta">補強 §10 編碼規範</div>
+            </div>
+            <div class="tl-time">08:00</div>
+          </div>
+          <div class="tl-body">明訂「資料庫 init.sql 必須與 migration 同步」。</div>
+        </div>
+      </div>
+
+      <div class="day-header">📅 一週前 · 2026-05-13</div>
+      <div class="timeline">
+        <div class="tl-event decision" data-type="decision">
+          <div class="tl-head">
+            <div>
+              <div class="tl-title">⚖️ 重大決策：Codex 主責編碼，Claude 不寫產品 code</div>
+              <div class="tl-meta">寫入記憶 + 憲法 §01</div>
+            </div>
+            <div class="tl-time">10:00</div>
+          </div>
+          <div class="tl-body">
+            刻意做能力分工與權力單向。Claude = planner / reviewer，Codex = coder。例外：純組織骨架可由 Claude 建。
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="col">
+
+      <!-- Decisions index -->
+      <div class="card">
+        <div class="card-head"><h3>⚖️ 重要決策索引 <span class="en">ADR Index</span></h3></div>
+        <div style="display:flex;flex-direction:column;gap:6px;font-size:12.5px">
+          <div style="display:flex;justify-content:space-between;color:var(--muted);padding:6px 0;border-bottom:1px solid var(--border)">
+            <span><code>ADR-018</code> 訂閱方案 v1 跳過 GDPR</span>
+            <span style="font-size:11px">05-20</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;color:var(--muted);padding:6px 0;border-bottom:1px solid var(--border)">
+            <span><code>ADR-017</code> 用 Stripe Checkout 不用 Elements</span>
+            <span style="font-size:11px">05-20</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;color:var(--muted);padding:6px 0;border-bottom:1px solid var(--border)">
+            <span><code>ADR-016</code> Codex 升級 0.130.0</span>
+            <span style="font-size:11px">05-19</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;color:var(--muted);padding:6px 0;border-bottom:1px solid var(--border)">
+            <span><code>ADR-015</code> i18n 用 next-i18next</span>
+            <span style="font-size:11px">05-12</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;color:var(--muted);padding:6px 0">
+            <span><code>ADR-014</code> 資料庫選 Postgres</span>
+            <span style="font-size:11px">05-05</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Constitution evolution -->
+      <div class="card">
+        <div class="card-head"><h3>📜 憲法演進 <span class="en">Constitution Evolution</span></h3></div>
+        <div style="font-size:12.5px;color:var(--muted);line-height:1.9">
+          <div><b style="color:var(--text)">v0.4.0</b> 2026-05-19 · +§05.3 部署規範</div>
+          <div><b style="color:var(--text)">v0.3.5</b> 2026-05-16 · §10 編碼規範補強</div>
+          <div><b style="color:var(--text)">v0.3.0</b> 2026-05-13 · §01 確立分工</div>
+          <div><b style="color:var(--text)">v0.2.0</b> 2026-05-05 · 12 條文完成</div>
+          <div><b style="color:var(--text)">v0.1.0</b> 2026-04-12 · charter 草稿</div>
+        </div>
+      </div>
+
+      <!-- Learnings -->
+      <div class="card">
+        <div class="card-head"><h3>🧠 累積學到的坑 <span class="en">Lessons Learned</span> <span class="count" style="background:var(--warn);color:#451a03">12</span></h3></div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.7">
+          <div style="padding:6px 0;border-bottom:1px solid var(--border)">🪤 codex exec headless 卡死 (引號嵌套)</div>
+          <div style="padding:6px 0;border-bottom:1px solid var(--border)">🪤 Cloudflare html_handling 預設</div>
+          <div style="padding:6px 0;border-bottom:1px solid var(--border)">🪤 PHP 8.5 棄用 PDO::MYSQL_ATTR</div>
+          <div style="padding:6px 0;border-bottom:1px solid var(--border)">🪤 Next.js build time 讀 .env.local</div>
+          <div style="padding:6px 0;border-bottom:1px solid var(--border)">🪤 OpenNext 3 層動態路由 404</div>
+          <div style="padding:6px 0;border-bottom:1px solid var(--border)">🪤 ThinkPHP 巢狀路由順序</div>
+          <div style="padding:6px 0">🪤 Opus 4.7 不支援 temperature</div>
+          <div style="padding:6px 0;color:var(--accent);cursor:pointer">看全部 12 條 →</div>
+        </div>
+      </div>
+
+      <!-- Git activity -->
+      <div class="card">
+        <div class="card-head"><h3>🌿 Git 活動 <span class="en">Git Activity</span></h3></div>
+        <div style="font-size:12.5px;color:var(--muted)">本週</div>
+        <div style="display:flex;gap:2px;margin-top:8px">
+          <div style="flex:1;height:40px;background:rgba(74,222,128,0.6);border-radius:2px" title="週一 18 commits"></div>
+          <div style="flex:1;height:30px;background:rgba(74,222,128,0.4);border-radius:2px" title="週二 12"></div>
+          <div style="flex:1;height:55px;background:rgba(74,222,128,0.8);border-radius:2px" title="週三 22"></div>
+          <div style="flex:1;height:25px;background:rgba(74,222,128,0.3);border-radius:2px" title="週四 8"></div>
+          <div style="flex:1;height:35px;background:rgba(74,222,128,0.5);border-radius:2px" title="週五 14"></div>
+          <div style="flex:1;height:10px;background:rgba(74,222,128,0.2);border-radius:2px" title="週六 2"></div>
+          <div style="flex:1;height:5px;background:rgba(74,222,128,0.15);border-radius:2px" title="週日 1"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--dim);margin-top:4px">
+          <span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span>
+        </div>
+        <div style="font-size:11.5px;color:var(--muted);margin-top:8px">總計 77 commits · 47% 來自 Codex</div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="shared.js"></script>
+<script>
+  function switchTab(e, type) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    e.target.classList.add('active');
+    document.querySelectorAll('.tl-event').forEach(ev => {
+      ev.style.display = (type === 'all' || ev.dataset.type === type) ? '' : 'none';
+    });
+  }
+</script>
+</body>
+</html>

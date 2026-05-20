@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>AI_ORG · 設定 (Settings)</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+  .settings-layout { display: grid; grid-template-columns: 220px 1fr; gap: 18px; }
+  .settings-nav {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 10px;
+    position: sticky; top: 72px;
+  }
+  .settings-nav .nav-item {
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    color: var(--muted);
+    cursor: pointer;
+    margin-bottom: 2px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .settings-nav .nav-item:hover { background: var(--panel-2); color: var(--text); }
+  .settings-nav .nav-item.active { background: var(--border); color: var(--text); font-weight: 600; }
+
+  .settings-content { display: flex; flex-direction: column; gap: 18px; }
+  .settings-section {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 22px 26px;
+  }
+  .settings-section h2 { margin: 0 0 4px; font-size: 18px; }
+  .settings-section h2 .en { color: var(--muted); font-weight: 400; font-size: 13px; margin-left: 6px; }
+  .settings-section .section-desc { color: var(--muted); font-size: 12.5px; margin-bottom: 18px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+
+  .setting-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+    gap: 16px;
+  }
+  .setting-row:last-child { border-bottom: none; }
+  .setting-row .info { flex: 1; min-width: 0; }
+  .setting-row .label { font-weight: 600; font-size: 13.5px; }
+  .setting-row .hint { font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .setting-row .control { flex-shrink: 0; }
+
+  .toggle {
+    width: 40px; height: 22px;
+    background: var(--border);
+    border-radius: 999px;
+    position: relative;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .toggle::after {
+    content: '';
+    position: absolute;
+    top: 2px; left: 2px;
+    width: 18px; height: 18px;
+    background: var(--muted);
+    border-radius: 50%;
+    transition: transform 0.2s, background 0.2s;
+  }
+  .toggle.on { background: var(--ok); }
+  .toggle.on::after { transform: translateX(18px); background: #fff; }
+
+  select, input[type="text"], input[type="number"] {
+    background: var(--panel-2);
+    border: 1px solid var(--border-soft);
+    color: var(--text);
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 13px;
+    min-width: 160px;
+  }
+  select:focus, input:focus { outline: none; border-color: var(--accent); }
+
+  .model-card {
+    background: var(--panel-2);
+    border: 1px solid var(--border-soft);
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+  }
+  .model-card .head { display: flex; justify-content: space-between; align-items: center; }
+  .model-card .agent-name { font-weight: 600; font-size: 13.5px; display: flex; align-items: center; gap: 8px; }
+  .model-card .agent-name .icon { font-size: 16px; }
+  .model-card .cost { font-size: 11.5px; color: var(--muted); margin-top: 4px; }
+
+  .budget-input { display: flex; gap: 8px; align-items: center; }
+  .budget-input input { width: 100px; text-align: right; }
+
+  .danger-zone {
+    background: linear-gradient(135deg, rgba(248,113,113,0.05), rgba(248,113,113,0.02));
+    border: 1px solid #7f1d1d;
+  }
+  .danger-zone h2 { color: var(--danger); }
+  .danger-btn { background: var(--danger); color: #fff; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; font-family: inherit; font-size: 13px; }
+  .danger-btn:hover { background: #ef4444; }
+
+  @media (max-width: 900px) {
+    .settings-layout { grid-template-columns: 1fr; }
+    .settings-nav { position: static; }
+  }
+</style>
+</head>
+<body>
+<div id="topbar-slot" data-active="settings"></div>
+
+<div class="container">
+  <div class="hero">
+    <h1>⚙️ 設定 <span class="greet">Settings · Configure your AI org</span></h1>
+    <div class="date">CEO: jubileecreator@gmail.com</div>
+  </div>
+
+  <div class="settings-layout">
+
+    <!-- Sidebar -->
+    <div class="settings-nav">
+      <div class="nav-item active" onclick="scrollTo('s-general', this)">🏢 一般</div>
+      <div class="nav-item" onclick="scrollTo('s-agents', this)">🤖 AI 員工配置</div>
+      <div class="nav-item" onclick="scrollTo('s-budget', this)">💰 預算與限額</div>
+      <div class="nav-item" onclick="scrollTo('s-notifications', this)">🔔 通知</div>
+      <div class="nav-item" onclick="scrollTo('s-approval', this)">✅ 批准規則</div>
+      <div class="nav-item" onclick="scrollTo('s-security', this)">🔐 安全</div>
+      <div class="nav-item" onclick="scrollTo('s-integrations', this)">🔌 整合</div>
+      <div class="nav-item" onclick="scrollTo('s-danger', this)">🚨 危險區</div>
+    </div>
+
+    <!-- Content -->
+    <div class="settings-content">
+
+      <div class="settings-section" id="s-general">
+        <h2>🏢 一般 <span class="en">General</span></h2>
+        <div class="section-desc">公司基本設定</div>
+        <div class="setting-row">
+          <div class="info"><div class="label">公司名稱</div><div class="hint">顯示在儀表板和 commit 訊息</div></div>
+          <input type="text" value="StarMaps" class="control">
+        </div>
+        <div class="setting-row">
+          <div class="info"><div class="label">CEO Email</div><div class="hint">接收批准請求與緊急通知</div></div>
+          <input type="text" value="jubileecreator@gmail.com" class="control" style="min-width:240px">
+        </div>
+        <div class="setting-row">
+          <div class="info"><div class="label">時區</div><div class="hint">影響工作時段、安靜時段</div></div>
+          <select class="control"><option>Asia/Taipei (GMT+8)</option><option>America/Los_Angeles</option><option>UTC</option></select>
+        </div>
+        <div class="setting-row">
+          <div class="info"><div class="label">主要語言</div><div class="hint">CEO-orchestrator 回覆語言</div></div>
+          <select class="control"><option>繁體中文（含英文標註）</option><option>English</option><option>日本語</option></select>
+        </div>
+        <div class="setting-row">
+          <div class="info"><div class="label">工作日</div><div class="hint">AI 員工的「上班」時段，超出可進「靜音」</div></div>
+          <select class="control"><option>週一 - 週五</option><option>週一 - 週六</option><option>無休 (24/7)</option></select>
+        </div>
+      </div>
+
+      <div class="settings-section" id="s-agents">
+        <h2>🤖 AI 員工配置 <span class="en">Agent Configuration</span></h2>
+        <div class="section-desc">選擇每個角色使用的模型。可以省成本（用 Haiku）或拼能力（用 Opus）</div>
+
+        <div class="model-card">
+          <div class="head">
+            <div class="agent-name"><span class="icon">🎯</span> CEO-orchestrator</div>
+            <select><option>Claude Opus 4.7 (1M) ★ 推薦</option><option>Claude Sonnet 4.6</option><option>GPT-5.5</option></select>
+          </div>
+          <div class="cost">當前消耗：$11.20 / 月 · 主持 34 次討論</div>
+        </div>
+
+        <div class="model-card">
+          <div class="head">
+            <div class="agent-name"><span class="icon">🔍</span> Planner</div>
+            <select><option>Claude Opus 4.7 ★ 推薦</option><option>Claude Sonnet 4.6</option><option>GPT-5.5</option></select>
+          </div>
+          <div class="cost">當前消耗：$8.40 / 月 · 產出 89 spec</div>
+        </div>
+
+        <div class="model-card">
+          <div class="head">
+            <div class="agent-name"><span class="icon">⌨️</span> Frontend</div>
+            <select><option>Codex (GPT-5.5) ★ 推薦</option><option>Claude Sonnet 4.6</option><option>Claude Opus 4.7</option></select>
+          </div>
+          <div class="cost">當前消耗：$9.10 / 月 · 142 commits</div>
+        </div>
+
+        <div class="model-card">
+          <div class="head">
+            <div class="agent-name"><span class="icon">🔧</span> Backend</div>
+            <select><option>Codex (GPT-5.5) ★ 推薦</option><option>Claude Sonnet 4.6</option><option>Claude Opus 4.7</option></select>
+          </div>
+          <div class="cost">當前消耗：$8.70 / 月 · 98 commits</div>
+        </div>
+
+        <div class="model-card">
+          <div class="head">
+            <div class="agent-name"><span class="icon">🧪</span> QA</div>
+            <select><option selected>Claude Sonnet 4.6 ★ 推薦</option><option>Claude Opus 4.7</option><option>Claude Haiku 4.5</option></select>
+          </div>
+          <div class="cost">當前消耗：$5.80 / 月 · 312 測試</div>
+        </div>
+
+        <div class="model-card">
+          <div class="head">
+            <div class="agent-name"><span class="icon">🛡️</span> Constitution-keeper</div>
+            <select><option>Claude Opus 4.7 ★ 推薦</option><option>Claude Sonnet 4.6</option></select>
+          </div>
+          <div class="cost">當前消耗：$3.20 / 月 · 守衛 14 件 diff</div>
+        </div>
+
+        <div class="model-card">
+          <div class="head">
+            <div class="agent-name"><span class="icon">📋</span> Task</div>
+            <select><option selected>Claude Haiku 4.5 ★ 推薦（省成本）</option><option>Claude Sonnet 4.6</option></select>
+          </div>
+          <div class="cost">當前消耗：$1.10 / 月 · 處理 156 任務</div>
+        </div>
+
+        <div class="model-card">
+          <div class="head">
+            <div class="agent-name"><span class="icon">💬</span> Assistant</div>
+            <select><option selected>Claude Haiku 4.5 ★ 推薦</option><option>Claude Sonnet 4.6</option></select>
+          </div>
+          <div class="cost">當前消耗：$0.70 / 月 · 處理 28 雜務</div>
+        </div>
+      </div>
+
+      <div class="settings-section" id="s-budget">
+        <h2>💰 預算與限額 <span class="en">Budget &amp; Limits</span></h2>
+        <div class="section-desc">超出預算時的行為</div>
+        <div class="setting-row">
+          <div class="info"><div class="label">月度預算上限</div><div class="hint">超出後 AI 停止新任務</div></div>
+          <div class="budget-input"><span>$</span><input type="number" value="200" class="control"></div>
+        </div>
+        <div class="setting-row">
+          <div class="info"><div class="label">單一任務上限</div><div class="hint">估計超過此金額需 CEO 額外批准</div></div>
+          <div class="budget-input"><span>$</span><input type="number" value="20" class="control"></div>
+        </div>
+        <div class="setting-row">
+          <div class="info"><div class="label">預警閾值</div><div class="hint">達到此比例發通知</div></div>
+          <select class="control"><option>80%</option><option>90%</option><option>100%</option></select>
+        </div>
+        <div class="setting-row">
+          <div class="info"><div class="label">超預算時行為</div><div class="hint">硬停或軟降級</div></div>
+          <select class="control"><option>停止新任務（完成手上的）</option><option>立即停止全部</option><option>降級到 Haiku 模型繼續</option></select>
+        </div>
+      </div>
+
+      <div class="settings-section" id="s-notifications">
+        <h2>🔔 通知 <span class="en">Notifications</span></h2>
+        <div class="section-desc">何時找你 / 何時不要打擾</div>
+        <div class="setting-row">
+          <div class="info"><div class="label">📱 Push 通知</div><div class="hint">儀表板、瀏覽器通知</div></div>
+          <div class="toggle on" onclick="toggle(this)"></div>
+        </div>
+        <div class="setting-row">
+          <div class="info"><div class="label">📧 Email 摘要</div><div class="hint">每天 09:00 寄當日待辦</div></div>
+          <div class="toggle on" onclick="toggle(this)"></div>
+        </div>
+        <div class="setting-row">
+          <div class="info"><div class="label">💬 Slack 整合</div><div class="hint">即時通知到 #ai-org 頻道</div></div>
+          <div class="toggle" onclick="toggle(this)"></div>
+        </div>
+        <div class="setting-row">
+          <div class="info"><div class="label">🌙 安靜時段</div><div class="hint">非緊急通知不在這段時間發</div></div>
+          <select class="control"><option>22:00 - 08:00</option><option>20:00 - 09:00</option><option>關閉</option></select>
+        </div>
+        <div class="setting-row">
+          <div class="info"><div class="label">🚨 緊急例外</div><div class="hint">不論時段都會通知</div></div>
+          <select class="control"><option>安全事件 + 預算爆表 + 客戶投訴</option><option>僅安全事件</option><option>不例外</option></select>
+        </div>
+      </div>
+
+      <div class="settings-section" id="s-approval">
+        <h2>✅ 批准規則 <span class="en">Approval Rules</span></h2>
+        <div class="section-desc">自動批准 vs 必須人工批准的界線</div>
+        <div class="setting-row">
+          <div class="info"><div class="label">自動批准小額 spec</div><div class="hint">估計 &lt; $0.5 的 task 自動開工</div></div>
+          <div class="toggle" onclick="toggle(this)"></div>
+        </div>
+        <div class="setting-row">
+          <div class="info"><div class="label">自動批准 UI tweak</div><div class="hint">純 CSS / 排版調整，不改邏輯</div></div>
+          <div class="toggle on" onclick="toggle(this)"></div>
+        </div>
+        <div class="setting-row">
+          <div class="info"><div class="label">必須 CEO 批准的場景</div><div class="hint">永遠不會自動通過</div></div>
+          <select class="control" style="min-width:240px"><option>付款相關 + schema 變更 + 修憲</option><option>僅修憲</option><option>全部需要批准</option></select>
+        </div>
+        <div class="setting-row">
+          <div class="info"><div class="label">逾時自動退回</div><div class="hint">CEO 多久未回覆視為拒絕</div></div>
+          <select class="control"><option>24 小時</option><option>8 小時</option><option>從不</option></select>
+        </div>
+      </div>
+
+      <div class="settings-section" id="s-security">
+        <h2>🔐 安全 <span class="en">Security</span></h2>
+        <div class="section-desc">機密與權限</div>
+        <div class="setting-row">
+          <div class="info"><div class="label">GitHub PAT 狀態</div><div class="hint">用於 Codex 提交、AI_ORG submodule</div></div>
+          <div style="color:var(--danger);font-size:12.5px">⚠️ 明文未輪換 · <a href="#" style="color:var(--accent)">立刻處理</a></div>
+        </div>
+        <div class="setting-row">
+          <div class="info"><div class="label">Stripe API Key</div><div class="hint">付款相關</div></div>
+          <div style="color:var(--ok);font-size:12.5px">✅ 環境變數注入</div>
+        </div>
+        <div class="setting-row">
+          <div class="info"><div class="label">Anthropic API Key</div><div class="hint">Claude 模型</div></div>
+          <div style="color:var(--ok);font-size:12.5px">✅ 環境變數注入</div>
+        </div>
+        <div class="setting-row">
+          <div class="info"><div class="label">OpenAI API Key</div><div class="hint">Codex 模型</div></div>
+          <div style="color:var(--ok);font-size:12.5px">✅ 環境變數注入</div>
+        </div>
+        <div class="setting-row">
+          <div class="info"><div class="label">2FA</div><div class="hint">CEO 帳號雙因子驗證</div></div>
+          <div class="toggle on" onclick="toggle(this)"></div>
+        </div>
+      </div>
+
+      <div class="settings-section" id="s-integrations">
+        <h2>🔌 整合 <span class="en">Integrations</span></h2>
+        <div class="section-desc">外部系統串接</div>
+        <div class="setting-row">
+          <div class="info"><div class="label">GitHub</div><div class="hint">@adexenx123 · 儲存 commits</div></div>
+          <span style="color:var(--ok);font-size:12px">✅ 已連線</span>
+        </div>
+        <div class="setting-row">
+          <div class="info"><div class="label">Linear</div><div class="hint">同步 task spec 與 backlog</div></div>
+          <button class="btn">連線</button>
+        </div>
+        <div class="setting-row">
+          <div class="info"><div class="label">Slack</div><div class="hint">通知 + chat 入口</div></div>
+          <button class="btn">連線</button>
+        </div>
+        <div class="setting-row">
+          <div class="info"><div class="label">Stripe</div><div class="hint">付款（測試模式）</div></div>
+          <span style="color:var(--ok);font-size:12px">✅ 測試模式</span>
+        </div>
+        <div class="setting-row">
+          <div class="info"><div class="label">Cloudflare</div><div class="hint">部署平台</div></div>
+          <span style="color:var(--ok);font-size:12px">✅ Workers</span>
+        </div>
+      </div>
+
+      <div class="settings-section danger-zone" id="s-danger">
+        <h2>🚨 危險區 <span class="en">Danger Zone</span></h2>
+        <div class="section-desc">這些操作不可逆，請謹慎</div>
+        <div class="setting-row">
+          <div class="info"><div class="label">暫停所有 AI 員工</div><div class="hint">立即停止所有 in-flight 任務，保留進度</div></div>
+          <button class="danger-btn" onclick="showToast('⏸️','所有 AI 員工已暫停', true)">⏸️ 暫停全部</button>
+        </div>
+        <div class="setting-row">
+          <div class="info"><div class="label">重置記憶</div><div class="hint">清空所有 agent memory，從零開始</div></div>
+          <button class="danger-btn" onclick="showToast('⚠️','請從討論室確認此操作', true)">🧠 清空</button>
+        </div>
+        <div class="setting-row">
+          <div class="info"><div class="label">解散組織</div><div class="hint">關閉所有 agent，匯出歷史</div></div>
+          <button class="danger-btn" onclick="showToast('⚠️','此操作不可逆，請從討論室發起', true)">💀 解散</button>
+        </div>
+      </div>
+
+      <div style="text-align:right;padding:10px 0">
+        <button class="btn" onclick="showToast('↩️','已還原所有變更')">取消</button>
+        <button class="btn boss" onclick="showToast('✅','設定已儲存')">儲存變更</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="shared.js"></script>
+<script>
+  function scrollTo(id, btn) {
+    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(id).scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  function toggle(el) {
+    el.classList.toggle('on');
+  }
+</script>
+</body>
+</html>

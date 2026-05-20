@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>AI_ORG · 任務 (Tasks)</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+  .summary-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 18px; }
+  .stat-card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; }
+  .stat-card .label { font-size: 11.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .stat-card .value { font-size: 22px; font-weight: 700; color: var(--text); margin-top: 4px; }
+  .stat-card .sub { font-size: 11px; color: var(--dim); }
+  .stat-card.alert { border-color: #7c2d12; background: linear-gradient(180deg, rgba(251,146,60,0.06), var(--panel)); }
+  .stat-card.alert .value { color: var(--boss); }
+
+  .task-row { padding: 14px 16px; border: 1px solid var(--border-soft); background: var(--panel-2); border-radius: 8px; margin-bottom: 8px; }
+  .task-row .top { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+  .task-row .title { font-weight: 600; font-size: 14px; }
+  .task-row .meta { font-size: 11.5px; color: var(--muted); margin-top: 4px; display: flex; gap: 10px; flex-wrap: wrap; }
+  .task-row .desc { font-size: 12.5px; color: var(--muted); margin-top: 6px; }
+  .task-row.urgent { border-left: 3px solid var(--boss); }
+  .task-row.shipping { border-left: 3px solid var(--ok); }
+  .task-row.running { border-left: 3px solid var(--accent); }
+  .task-row.blocked { border-left: 3px solid var(--danger); }
+  .task-row.queue { border-left: 3px solid var(--dim); }
+
+  .progress-mini { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
+  .progress-mini .bar { width: 80px; height: 4px; background: var(--border); border-radius: 999px; overflow: hidden; }
+  .progress-mini .fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); border-radius: 999px; }
+
+  .gantt { background: var(--panel-2); border-radius: 8px; padding: 12px; font-family: ui-monospace, monospace; font-size: 11.5px; overflow-x: auto; }
+  .gantt-row { display: grid; grid-template-columns: 200px 1fr; gap: 12px; padding: 4px 0; align-items: center; }
+  .gantt-label { color: var(--text); }
+  .gantt-bar { height: 18px; border-radius: 4px; position: relative; }
+  .gantt-bar.done { background: rgba(74,222,128,0.4); border: 1px solid var(--ok); }
+  .gantt-bar.running { background: rgba(56,189,248,0.4); border: 1px solid var(--accent); }
+  .gantt-bar.queue { background: rgba(100,116,139,0.3); border: 1px dashed var(--dim); }
+
+  @media (max-width: 900px) { .summary-row { grid-template-columns: repeat(2, 1fr); } }
+</style>
+</head>
+<body>
+<div id="topbar-slot" data-active="tasks"></div>
+
+<div class="container">
+  <div class="hero">
+    <h1>📋 任務 <span class="greet">Tasks · All work in the org</span></h1>
+    <div class="date">即時更新 · 自動每 5 秒重整</div>
+  </div>
+
+  <div class="summary-row">
+    <div class="stat-card alert"><div class="label">待你批准</div><div class="value">4</div><div class="sub">2 spec · 2 ship</div></div>
+    <div class="stat-card"><div class="label">進行中</div><div class="value">5</div><div class="sub">1 plan · 3 code · 1 qa</div></div>
+    <div class="stat-card"><div class="label">隊列中</div><div class="value">7</div><div class="sub">最早 13:00 開始</div></div>
+    <div class="stat-card"><div class="label">本週完成</div><div class="value">11</div><div class="sub">+27% vs 上週</div></div>
+    <div class="stat-card"><div class="label">卡住</div><div class="value" style="color:var(--danger)">1</div><div class="sub">通知系統 (待你回覆)</div></div>
+  </div>
+
+  <div class="filter-bar">
+    <span class="chip active" onclick="filter(event,'all')">全部</span>
+    <span class="chip" onclick="filter(event,'urgent')">⏳ 待批准</span>
+    <span class="chip" onclick="filter(event,'running')">🔄 進行中</span>
+    <span class="chip" onclick="filter(event,'shipping')">✅ 待 ship</span>
+    <span class="chip" onclick="filter(event,'blocked')">🚨 卡住</span>
+    <span class="chip" onclick="filter(event,'queue')">📥 隊列</span>
+    <input class="search" placeholder="🔍 搜尋任務名稱、agent..." oninput="searchTasks(this.value)">
+  </div>
+
+  <div class="grid">
+    <div class="col">
+      <div class="card">
+        <div class="card-head">
+          <h3>所有任務 <span class="en">All Tasks</span> <span class="count">17</span></h3>
+        </div>
+
+        <div id="task-list">
+          <div class="task-row urgent" data-type="urgent" data-search="匯出 pdf export planner">
+            <div class="top">
+              <div><span class="badge spec">SPEC</span> <span class="title">匯出 PDF 按鈕</span></div>
+              <div><a class="btn primary" href="index.html">去批准 →</a></div>
+            </div>
+            <div class="meta">🧠 Planner · ⏱️ 4hr · 💸 $1.20 · 等你 18 分鐘</div>
+          </div>
+          <div class="task-row urgent" data-type="urgent" data-search="訂閱方案 pricing">
+            <div class="top">
+              <div><span class="badge spec">SPEC</span> <span class="title">訂閱方案頁面 MVP</span></div>
+              <div><a class="btn primary" href="index.html">去批准 →</a></div>
+            </div>
+            <div class="meta">🧠 Planner · ⏱️ 8hr · 💸 $3.50 · <span class="badge risk">GDPR 風險</span></div>
+          </div>
+          <div class="task-row shipping" data-type="shipping" data-search="暗色 dark mode">
+            <div class="top">
+              <div><span class="badge ship">SHIP</span> <span class="title">暗色模式切換</span></div>
+              <div><a class="btn primary" href="index.html">去批准 →</a></div>
+            </div>
+            <div class="meta">⌨️ Codex · <span class="badge test">12/12 通過</span> · 🧠 Claude review ✓ · +127/-23 行</div>
+          </div>
+          <div class="task-row shipping" data-type="shipping" data-search="webhook 通知">
+            <div class="top">
+              <div><span class="badge ship">SHIP</span> <span class="title">Webhook 通知整合</span></div>
+              <div><a class="btn primary" href="index.html">去批准 →</a></div>
+            </div>
+            <div class="meta">⌨️ Codex · <span class="badge test">18/18 通過</span> · 🧠 Claude review ✓ · +302/-8 行</div>
+          </div>
+
+          <div class="task-row running" data-type="running" data-search="通知 系統 重構 planner">
+            <div class="top">
+              <div><span class="badge muted">PLAN</span> <span class="title">通知系統重構</span></div>
+              <div class="progress-mini">40% <div class="bar"><div class="fill" style="width:40%"></div></div></div>
+            </div>
+            <div class="meta">🧠 Planner · 預估 11:30 完成 · 已跑 22 分</div>
+          </div>
+          <div class="task-row running" data-type="running" data-search="dashboard 卡片 frontend">
+            <div class="top">
+              <div><span class="badge muted">CODE</span> <span class="title">Dashboard 卡片元件</span></div>
+              <div class="progress-mini">72% <div class="bar"><div class="fill" style="width:72%"></div></div></div>
+            </div>
+            <div class="meta">⌨️ Codex (frontend) · 18 分 · React + shadcn</div>
+          </div>
+          <div class="task-row running" data-type="running" data-search="auth middleware backend">
+            <div class="top">
+              <div><span class="badge muted">CODE</span> <span class="title">REST API auth middleware</span></div>
+              <div class="progress-mini">55% <div class="bar"><div class="fill" style="width:55%"></div></div></div>
+            </div>
+            <div class="meta">⌨️ Codex (backend) · 32 分 · FastAPI + JWT</div>
+          </div>
+          <div class="task-row running" data-type="running" data-search="i18n 西班牙 spanish">
+            <div class="top">
+              <div><span class="badge muted">CODE</span> <span class="title">i18n 西班牙文翻譯</span></div>
+              <div class="progress-mini">18% <div class="bar"><div class="fill" style="width:18%"></div></div></div>
+            </div>
+            <div class="meta">⌨️ Codex · 4 分 · 共 142 字串</div>
+          </div>
+          <div class="task-row running" data-type="running" data-search="登入 e2e qa playwright">
+            <div class="top">
+              <div><span class="badge muted">QA</span> <span class="title">登入頁面 E2E 測試</span></div>
+              <div class="progress-mini">53% <div class="bar"><div class="fill" style="width:53%"></div></div></div>
+            </div>
+            <div class="meta">🧪 QA · Playwright 8/15 · 全瀏覽器 + 行動裝置</div>
+          </div>
+
+          <div class="task-row blocked" data-type="blocked" data-search="email 通知 信件">
+            <div class="top">
+              <div><span class="badge risk">BLOCKED</span> <span class="title">Email 通知模板</span></div>
+              <div><button class="btn primary" onclick="showToast('🛠️','已開啟解阻 modal')">回覆 →</button></div>
+            </div>
+            <div class="meta">🤔 等你回覆：要用 SendGrid 還是 AWS SES？卡 1 小時 22 分</div>
+          </div>
+
+          <div class="task-row queue" data-type="queue" data-search="付款 stripe">
+            <div class="top">
+              <div><span class="badge muted">QUEUE</span> <span class="title">Stripe 付款整合</span></div>
+              <div style="color:var(--dim);font-size:11.5px">13:00 開始</div>
+            </div>
+            <div class="meta">⌨️ Codex 待命 · 估 6hr · 等暗色模式 ship 後啟動</div>
+          </div>
+          <div class="task-row queue" data-type="queue" data-search="行動裝置 mobile responsive">
+            <div class="top">
+              <div><span class="badge muted">QUEUE</span> <span class="title">行動裝置響應式優化</span></div>
+              <div style="color:var(--dim);font-size:11.5px">14:30 開始</div>
+            </div>
+            <div class="meta">⌨️ Codex 待命 · 估 4hr</div>
+          </div>
+          <div class="task-row queue" data-type="queue" data-search="api 文件 docs">
+            <div class="top">
+              <div><span class="badge muted">QUEUE</span> <span class="title">API 文件自動生成</span></div>
+              <div style="color:var(--dim);font-size:11.5px">明天 09:00</div>
+            </div>
+            <div class="meta">📋 Task · 估 2hr · OpenAPI 規範</div>
+          </div>
+          <div class="task-row queue" data-type="queue" data-search="效能 監控 monitoring">
+            <div class="top">
+              <div><span class="badge muted">QUEUE</span> <span class="title">效能監控儀表板</span></div>
+              <div style="color:var(--dim);font-size:11.5px">本週五</div>
+            </div>
+            <div class="meta">📋 Task · 估 8hr · Grafana + Prometheus</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Gantt -->
+      <div class="card">
+        <div class="card-head">
+          <h3>📅 今日時間軸 <span class="en">Today's Timeline</span></h3>
+          <span style="font-size:12px;color:var(--muted)">09:00 ─────────── 13:00 ─────────── 18:00</span>
+        </div>
+        <div class="gantt">
+          <div class="gantt-row">
+            <div class="gantt-label">通知系統 (Planning)</div>
+            <div style="position:relative;height:18px">
+              <div class="gantt-bar running" style="position:absolute;left:5%;width:18%"></div>
+            </div>
+          </div>
+          <div class="gantt-row">
+            <div class="gantt-label">Dashboard 卡片 (Code)</div>
+            <div style="position:relative;height:18px">
+              <div class="gantt-bar running" style="position:absolute;left:10%;width:22%"></div>
+            </div>
+          </div>
+          <div class="gantt-row">
+            <div class="gantt-label">Auth middleware (Code)</div>
+            <div style="position:relative;height:18px">
+              <div class="gantt-bar running" style="position:absolute;left:8%;width:28%"></div>
+            </div>
+          </div>
+          <div class="gantt-row">
+            <div class="gantt-label">登入 E2E (QA)</div>
+            <div style="position:relative;height:18px">
+              <div class="gantt-bar running" style="position:absolute;left:15%;width:20%"></div>
+            </div>
+          </div>
+          <div class="gantt-row">
+            <div class="gantt-label">Stripe 付款 (Queue)</div>
+            <div style="position:relative;height:18px">
+              <div class="gantt-bar queue" style="position:absolute;left:40%;width:35%"></div>
+            </div>
+          </div>
+          <div class="gantt-row">
+            <div class="gantt-label">行動裝置優化 (Queue)</div>
+            <div style="position:relative;height:18px">
+              <div class="gantt-bar queue" style="position:absolute;left:55%;width:25%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="card">
+        <div class="card-head"><h3>📊 今日產出 <span class="en">Today's Output</span></h3></div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.9">
+          <div style="display:flex;justify-content:space-between"><span>已完成任務</span> <b style="color:var(--text);font-size:15px">3</b></div>
+          <div style="display:flex;justify-content:space-between"><span>新建 commits</span> <b style="color:var(--text);font-size:15px">14</b></div>
+          <div style="display:flex;justify-content:space-between"><span>新增 / 刪除行數</span> <b style="color:var(--text);font-size:15px">+842 / -213</b></div>
+          <div style="display:flex;justify-content:space-between"><span>測試通過</span> <b style="color:var(--ok);font-size:15px">47/47 ✓</b></div>
+          <div style="display:flex;justify-content:space-between"><span>Token 消耗</span> <b style="color:var(--text);font-size:15px">$4.12</b></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h3>⚡ 快捷動作 <span class="en">Quick Actions</span></h3></div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <button class="btn boss" onclick="showToast('💡','跳轉到討論室')" style="text-align:left">+ 新增任務 (New task)</button>
+          <button class="btn" onclick="showToast('⏸️','所有 in-flight 任務已暫停')" style="text-align:left">⏸️ 暫停所有任務</button>
+          <button class="btn" onclick="showToast('📥','已匯出 tasks.csv')" style="text-align:left">📥 匯出任務報表</button>
+          <a class="btn" href="discuss.html" style="text-align:left;display:block">💬 跟 orchestrator 討論</a>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h3>🚦 等待我回覆 <span class="en">Awaiting You</span> <span class="count" style="background:var(--danger)">1</span></h3></div>
+        <div style="background:var(--panel-2);border:1px solid #7f1d1d;border-radius:8px;padding:12px;font-size:12.5px">
+          <b>Email 通知模板</b><br>
+          <span style="color:var(--muted)">SendGrid 還是 AWS SES？</span><br>
+          <div style="margin-top:8px;display:flex;gap:6px">
+            <button class="btn primary" style="padding:4px 10px;font-size:11.5px" onclick="showToast('✅','已選 SendGrid，Codex 開工')">SendGrid</button>
+            <button class="btn" style="padding:4px 10px;font-size:11.5px" onclick="showToast('✅','已選 AWS SES，Codex 開工')">AWS SES</button>
+            <button class="btn ghost" style="padding:4px 10px;font-size:11.5px" onclick="showToast('💬','已開啟討論')">想想</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h3>🎯 本週目標 <span class="en">Weekly Goal</span></h3></div>
+        <div style="font-size:13px;line-height:1.7">
+          <div style="display:flex;justify-content:space-between;color:var(--muted)"><span>已完成 11 / 18 任務</span> <b style="color:var(--text)">61%</b></div>
+          <div class="budget-bar" style="height:8px;margin:8px 0"><div style="height:100%;background:linear-gradient(90deg,var(--accent),var(--ok));border-radius:999px;width:61%"></div></div>
+          <div style="font-size:11.5px;color:var(--dim)">需在週五前完成：Stripe 付款 + 行動優化 + API 文件</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="shared.js"></script>
+<script>
+  function filter(e, type) {
+    document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+    e.target.classList.add('active');
+    document.querySelectorAll('.task-row').forEach(row => {
+      row.style.display = (type === 'all' || row.dataset.type === type) ? '' : 'none';
+    });
+  }
+  function searchTasks(q) {
+    q = q.toLowerCase();
+    document.querySelectorAll('.task-row').forEach(row => {
+      const s = (row.dataset.search || '').toLowerCase() + row.textContent.toLowerCase();
+      row.style.display = s.includes(q) ? '' : 'none';
+    });
+  }
+</script>
+</body>
+</html>

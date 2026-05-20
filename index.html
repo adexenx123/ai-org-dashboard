@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>AI_ORG · 儀表板 (Dashboard)</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+  .approval-item {
+    background: var(--panel-2);
+    border: 1px solid var(--border-soft);
+    border-left: 3px solid var(--boss);
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    transition: transform 0.15s, opacity 0.4s;
+  }
+  .approval-item.shipping { border-left-color: var(--ok); }
+  .approval-item.removing { opacity: 0; transform: translateX(20px); }
+  .approval-item .title { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+  .approval-item .meta { font-size: 12px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 12px; }
+  .approval-item .meta span b { color: var(--text); font-weight: 500; }
+  .approval-item .desc { font-size: 12.5px; color: var(--muted); margin: 6px 0 10px; }
+  .approval-item .actions { display: flex; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
+
+  .kanban { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .kanban-col { background: var(--panel-2); border: 1px solid var(--border-soft); border-radius: 8px; padding: 10px; min-height: 120px; }
+  .kcol-head { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; display: flex; justify-content: space-between; }
+  .kanban-card { background: var(--panel); border: 1px solid var(--border-soft); border-radius: 6px; padding: 8px 10px; margin-bottom: 6px; font-size: 12.5px; }
+  .kanban-card .k-title { color: var(--text); margin-bottom: 4px; font-weight: 500; }
+  .kanban-card .k-meta { color: var(--dim); font-size: 11px; }
+  .progress { height: 4px; background: var(--border); border-radius: 999px; margin-top: 6px; overflow: hidden; }
+  .progress .bar { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); border-radius: 999px; transition: width 0.5s; }
+
+  .agents { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .agent { background: var(--panel-2); border: 1px solid var(--border-soft); border-radius: 8px; padding: 10px 12px; display: flex; gap: 10px; }
+  .agent .icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+  .agent.active .icon { background: rgba(74,222,128,0.18); }
+  .agent.idle .icon { background: rgba(100,116,139,0.18); }
+  .agent .body { flex: 1; min-width: 0; }
+  .agent .name { font-size: 12.5px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 5px; }
+  .agent .status { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .agent.active .status { color: var(--ok); }
+  .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--dim); }
+  .agent.active .status-dot { background: var(--ok); box-shadow: 0 0 6px var(--ok); }
+
+  .stat-big { font-size: 28px; font-weight: 700; margin: 4px 0 0; }
+  .stat-big .sub { font-size: 13px; color: var(--muted); font-weight: 400; margin-left: 6px; }
+  .budget-bar { height: 8px; background: var(--border); border-radius: 999px; margin: 12px 0 6px; overflow: hidden; }
+  .budget-bar .fill { height: 100%; background: linear-gradient(90deg, var(--ok), var(--warn)); }
+  .breakdown { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); margin-top: 12px; }
+  .breakdown .row { display: flex; justify-content: space-between; }
+  .breakdown .row b { color: var(--text); font-weight: 500; }
+
+  .ship-item { padding: 10px 0; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; font-size: 12.5px; }
+  .ship-item:last-child { border-bottom: none; }
+  .ship-item .ship-title { color: var(--text); font-weight: 500; }
+  .ship-item .ship-meta { color: var(--dim); font-size: 11px; margin-top: 2px; }
+  .ship-item .ship-time { color: var(--muted); font-size: 11px; white-space: nowrap; }
+
+  .constitution-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .article { background: var(--panel-2); border: 1px solid var(--border-soft); border-radius: 6px; padding: 8px; text-align: center; font-size: 11px; color: var(--muted); border-left: 2px solid var(--ok); }
+  .article b { display: block; color: var(--text); font-size: 12px; font-weight: 600; margin-bottom: 2px; }
+
+  .ideate { background: linear-gradient(135deg, rgba(251,146,60,0.08), rgba(167,139,250,0.05)); border: 1px solid var(--border-soft); border-radius: 12px; padding: 18px 20px; margin-top: 18px; }
+  .ideate textarea { width: 100%; background: var(--panel-2); border: 1px solid var(--border-soft); border-radius: 8px; color: var(--text); padding: 12px 14px; font-family: inherit; font-size: 13.5px; resize: vertical; min-height: 60px; margin-bottom: 10px; }
+  .ideate textarea:focus { outline: none; border-color: var(--accent); }
+  .quick-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { background: var(--panel-2); border: 1px solid var(--border-soft); padding: 4px 10px; border-radius: 999px; font-size: 11.5px; color: var(--muted); cursor: pointer; }
+  .chip:hover { color: var(--text); border-color: var(--accent); }
+
+  .fm-item { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+  .fm-item:last-child { border-bottom: none; }
+  .fm-item .fm-date { color: var(--dim); flex-shrink: 0; font-size: 11px; min-width: 50px; }
+  .fm-item b { color: var(--text); font-weight: 500; }
+
+  @media (max-width: 1100px) { .kanban, .agents { grid-template-columns: 1fr; } .constitution-grid { grid-template-columns: repeat(3, 1fr); } }
+</style>
+</head>
+<body>
+
+<div id="topbar-slot" data-active="index"></div>
+
+<div class="container">
+  <div class="hero">
+    <h1>👋 早安，老闆 <span class="greet">Good morning, CEO</span></h1>
+    <div class="date">2026-05-20 週三 · 09:14 AM · 共 4 件待你決定</div>
+  </div>
+
+  <div class="grid">
+    <div class="col">
+      <!-- Pending Approvals -->
+      <div class="card">
+        <div class="card-head">
+          <h3>⏳ 待你批准 <span class="en">Pending Approvals</span> <span class="count" id="pending-badge">4</span></h3>
+          <a class="more" href="tasks.html">看全部 →</a>
+        </div>
+
+        <div id="approvals">
+          <div class="approval-item" data-id="spec-pdf">
+            <div class="title">匯出 PDF 按鈕 <span style="color:var(--muted);font-weight:400;font-size:12px">(Export PDF)</span></div>
+            <div class="meta">
+              <span class="badge spec">SPEC</span>
+              <span>🧠 由 <b>Planner</b> 拆解</span>
+              <span>⏱️ <b>4 小時</b></span>
+              <span class="badge cost">💸 ≈ $1.20</span>
+            </div>
+            <div class="desc">使用者在報表頁需要一鍵匯出。Planner 建議用 <code>jsPDF</code>，不需後端。3 子任務、4 測試。</div>
+            <div class="actions">
+              <button class="btn primary" onclick="approveItem('spec-pdf', '✅ 匯出 PDF 已批准，Codex 已開工')">✅ 批准規格</button>
+              <button class="btn" onclick="showToast('✏️','改規格 modal 開啟（demo）')">✏️ 改規格</button>
+              <button class="btn danger" onclick="rejectItem('spec-pdf')">❌ 不做</button>
+              <a class="btn ghost" href="tasks.html">看完整 spec →</a>
+            </div>
+          </div>
+
+          <div class="approval-item" data-id="spec-pricing">
+            <div class="title">訂閱方案頁面 MVP <span style="color:var(--muted);font-weight:400;font-size:12px">(Pricing Page)</span></div>
+            <div class="meta">
+              <span class="badge spec">SPEC</span>
+              <span>🧠 由 <b>Planner</b> 拆解</span>
+              <span>⏱️ <b>8 小時</b></span>
+              <span class="badge cost">💸 ≈ $3.50</span>
+              <span class="badge risk">⚠️ GDPR 風險</span>
+            </div>
+            <div class="desc">三方案（Free/Pro/Team）+ Stripe SDK。<b style="color:var(--danger)">Constitution-keeper 標記</b>：GDPR 條款需先補。建議 v1 跳過、v2 補齊。</div>
+            <div class="actions">
+              <button class="btn primary" onclick="approveItem('spec-pricing','✅ 訂閱方案已批准（接受 GDPR 風險）')">✅ 批准（接受風險）</button>
+              <button class="btn" onclick="showToast('📜','將觸發修憲流程')">✏️ 先補 GDPR</button>
+              <button class="btn danger" onclick="rejectItem('spec-pricing')">❌ 不做</button>
+            </div>
+          </div>
+
+          <div class="approval-item shipping" data-id="ship-dark">
+            <div class="title">暗色模式切換 <span style="color:var(--muted);font-weight:400;font-size:12px">(Dark Mode)</span></div>
+            <div class="meta">
+              <span class="badge ship">SHIP</span>
+              <span>⌨️ <b>Codex</b> 實作</span>
+              <span class="badge test">🧪 12/12 通過</span>
+              <span>🧠 Claude review ✓</span>
+              <span>📦 +127 / -23</span>
+            </div>
+            <div class="desc">完成「設定 → 外觀 → 自動/亮/暗」。ThemeProvider + 5 元件 + E2E。已過硬閘門。</div>
+            <div class="actions">
+              <button class="btn primary" onclick="approveItem('ship-dark','🚀 暗色模式已上線')">🚀 Ship</button>
+              <button class="btn" onclick="showToast('👀','demo 影片載入中')">👀 Demo</button>
+              <button class="btn" onclick="showToast('📋','diff viewer 開啟')">📋 Diff</button>
+              <button class="btn danger" onclick="rejectItem('ship-dark')">🔄 退回</button>
+            </div>
+          </div>
+
+          <div class="approval-item shipping" data-id="ship-webhook">
+            <div class="title">Webhook 通知整合 <span style="color:var(--muted);font-weight:400;font-size:12px">(Webhooks)</span></div>
+            <div class="meta">
+              <span class="badge ship">SHIP</span>
+              <span>⌨️ <b>Codex</b> 實作</span>
+              <span class="badge test">🧪 18/18 通過</span>
+              <span>🧠 Claude review ✓</span>
+              <span>📦 +302 / -8</span>
+            </div>
+            <div class="desc">Slack / Discord / Email 三種 webhook，含簽章驗證、retry、rate-limit。</div>
+            <div class="actions">
+              <button class="btn primary" onclick="approveItem('ship-webhook','🚀 Webhook 已上線')">🚀 Ship</button>
+              <button class="btn" onclick="showToast('👀','demo 載入')">👀 Demo</button>
+              <button class="btn" onclick="showToast('📋','diff viewer 開啟')">📋 Diff</button>
+              <button class="btn danger" onclick="rejectItem('ship-webhook')">🔄 退回</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="approvals-empty" style="display:none; text-align:center; padding:30px; color:var(--muted)">
+          🎉 全部處理完了！Inbox zero. 享受你的策略時間吧。
+        </div>
+      </div>
+
+      <!-- Kanban -->
+      <div class="card">
+        <div class="card-head">
+          <h3>🔄 進行中 <span class="en">In Flight</span> <span class="count ok">5</span></h3>
+          <a class="more" href="tasks.html">看 Gantt →</a>
+        </div>
+        <div class="kanban">
+          <div class="kanban-col">
+            <div class="kcol-head"><span>規劃中 Planning</span><span>1</span></div>
+            <div class="kanban-card">
+              <div class="k-title">通知系統重構</div>
+              <div class="k-meta">🧠 Planner · 預估 11:30 完</div>
+              <div class="progress"><div class="bar" style="width:40%"></div></div>
+            </div>
+          </div>
+          <div class="kanban-col">
+            <div class="kcol-head"><span>編碼中 Coding</span><span>3</span></div>
+            <div class="kanban-card">
+              <div class="k-title">Dashboard 卡片元件</div>
+              <div class="k-meta">⌨️ Codex (frontend) · 18 分</div>
+              <div class="progress"><div class="bar" style="width:72%"></div></div>
+            </div>
+            <div class="kanban-card">
+              <div class="k-title">REST API auth middleware</div>
+              <div class="k-meta">⌨️ Codex (backend) · 32 分</div>
+              <div class="progress"><div class="bar" style="width:55%"></div></div>
+            </div>
+            <div class="kanban-card">
+              <div class="k-title">i18n 西班牙文</div>
+              <div class="k-meta">⌨️ Codex · 4 分</div>
+              <div class="progress"><div class="bar" style="width:18%"></div></div>
+            </div>
+          </div>
+          <div class="kanban-col">
+            <div class="kcol-head"><span>驗收中 QA</span><span>1</span></div>
+            <div class="kanban-card">
+              <div class="k-title">登入頁面 E2E</div>
+              <div class="k-meta">🧪 QA · Playwright 8/15</div>
+              <div class="progress"><div class="bar" style="width:53%"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Ships -->
+      <div class="card">
+        <div class="card-head">
+          <h3>✅ 最近上線 <span class="en">Recently Shipped</span></h3>
+          <a class="more" href="history.html">完整 changelog →</a>
+        </div>
+        <div class="ship-item">
+          <div>
+            <div class="ship-title">i18n 中英切換</div>
+            <div class="ship-meta">⌨️ Codex · 你批准於 05-19 17:48</div>
+          </div>
+          <div class="ship-time">昨天</div>
+        </div>
+        <div class="ship-item">
+          <div>
+            <div class="ship-title">登入頁面（含 Google OAuth）</div>
+            <div class="ship-meta">⌨️ Codex · 你批准於 05-18 14:22</div>
+          </div>
+          <div class="ship-time">2 天前</div>
+        </div>
+        <div class="ship-item">
+          <div>
+            <div class="ship-title">使用者 Profile 編輯</div>
+            <div class="ship-meta">⌨️ Codex · 你批准於 05-17 11:05</div>
+          </div>
+          <div class="ship-time">3 天前</div>
+        </div>
+        <div class="ship-item">
+          <div>
+            <div class="ship-title">資料庫 schema 遷移 v2.3</div>
+            <div class="ship-meta">⌨️ Codex · 你批准於 05-16 09:30</div>
+          </div>
+          <div class="ship-time">4 天前</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col">
+      <!-- Agents -->
+      <div class="card">
+        <div class="card-head">
+          <h3>🤖 AI 員工狀態 <span class="en">Agent Roster</span> <span class="count ok">8 active</span></h3>
+          <a class="more" href="agents.html">詳情 →</a>
+        </div>
+        <div class="agents">
+          <div class="agent active"><div class="icon">🎯</div><div class="body"><div class="name">CEO-orchestrator <span class="status-dot"></span></div><div class="status">監聽中</div></div></div>
+          <div class="agent active"><div class="icon">🔍</div><div class="body"><div class="name">Planner <span class="status-dot"></span></div><div class="status">拆通知系統</div></div></div>
+          <div class="agent active"><div class="icon">⌨️</div><div class="body"><div class="name">Frontend <span class="status-dot"></span></div><div class="status">寫卡片元件</div></div></div>
+          <div class="agent active"><div class="icon">🔧</div><div class="body"><div class="name">Backend <span class="status-dot"></span></div><div class="status">寫 auth middleware</div></div></div>
+          <div class="agent active"><div class="icon">🧪</div><div class="body"><div class="name">QA <span class="status-dot"></span></div><div class="status">E2E 8/15</div></div></div>
+          <div class="agent active"><div class="icon">🛡️</div><div class="body"><div class="name">Constitution-keeper <span class="status-dot"></span></div><div class="status">守衛中</div></div></div>
+          <div class="agent idle"><div class="icon">📋</div><div class="body"><div class="name">Task <span class="status-dot"></span></div><div class="status">閒置</div></div></div>
+          <div class="agent idle"><div class="icon">💬</div><div class="body"><div class="name">Assistant <span class="status-dot"></span></div><div class="status">閒置</div></div></div>
+        </div>
+      </div>
+
+      <!-- Budget -->
+      <div class="card">
+        <div class="card-head">
+          <h3>💰 預算 <span class="en">Token Budget</span></h3>
+          <a class="more" href="settings.html">設定 →</a>
+        </div>
+        <div style="font-size:12.5px;color:var(--muted)">本月已花</div>
+        <div class="stat-big">$48.20 <span class="sub">/ $200</span></div>
+        <div class="budget-bar"><div class="fill" style="width:24%"></div></div>
+        <div style="font-size:11.5px;color:var(--muted)">還剩 23 天 · 預估到月底 $128（在預算內 ✅）</div>
+        <div class="breakdown">
+          <div class="row"><span>🧠 Claude (Opus 4.7)</span> <b>$28.40</b></div>
+          <div class="row"><span>⌨️ Codex (GPT-5.5)</span> <b>$17.80</b></div>
+          <div class="row"><span>🔧 其他 (pgvector, infra)</span> <b>$2.00</b></div>
+        </div>
+      </div>
+
+      <!-- Constitution -->
+      <div class="card">
+        <div class="card-head">
+          <h3>📜 憲法狀態 <span class="en">Constitution</span></h3>
+          <a class="more" href="constitution.html">瀏覽 →</a>
+        </div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:10px">
+          🔐 指紋 <code>9ebdfb8</code> · 三檔投影對齊 ✅
+        </div>
+        <div class="constitution-grid">
+          <div class="article"><b>01</b>權力結構</div>
+          <div class="article"><b>02</b>脈絡分層</div>
+          <div class="article"><b>03</b>自檢</div>
+          <div class="article"><b>04</b>提示防禦</div>
+          <div class="article"><b>05</b>外部邊界</div>
+          <div class="article"><b>06</b>安全</div>
+          <div class="article"><b>07</b>批准</div>
+          <div class="article"><b>08</b>財務</div>
+          <div class="article"><b>09</b>倫理</div>
+          <div class="article"><b>10</b>編碼</div>
+          <div class="article"><b>11</b>外部API</div>
+          <div class="article"><b>12</b>記憶</div>
+        </div>
+      </div>
+
+      <!-- Failure modes -->
+      <div class="card">
+        <div class="card-head">
+          <h3>🪤 本週踩坑 <span class="en">Failure Modes</span> <span class="count warn">2</span></h3>
+          <a class="more" href="history.html">完整紀錄 →</a>
+        </div>
+        <div class="fm-item">
+          <div class="fm-date">05-20</div>
+          <div><b>codex exec headless 卡死</b> · 根因：嵌套引號 + tail。已加入檢核清單。</div>
+        </div>
+        <div class="fm-item">
+          <div class="fm-date">05-18</div>
+          <div><b>Cloudflare html_handling</b> · SEO 驗證檔 307。修法寫入 §5.3。</div>
+        </div>
+      </div>
+
+      <!-- Risk -->
+      <div class="card" style="border-color:#7f1d1d">
+        <div class="card-head">
+          <h3 style="color:var(--danger)">🚨 風險警示 <span class="en">Active Risks</span> <span class="count" style="background:var(--danger)">1</span></h3>
+        </div>
+        <div style="font-size:12.5px;color:var(--muted)">
+          <b style="color:var(--text)">明文 PAT 未輪換</b><br>
+          <code>~/.codex/config.toml</code> 內有明文 GitHub PAT，建議立即輪換 + 改環境變數注入。
+          <div style="margin-top:8px"><button class="btn primary" style="padding:4px 12px;font-size:11.5px" onclick="showToast('🛡️','已開啟輪換流程')">立刻處理 →</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Ideate -->
+  <div class="ideate">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+      <div style="width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,var(--boss),#d97706);display:flex;align-items:center;justify-content:center;font-size:16px">💡</div>
+      <div>
+        <h3 style="margin:0;font-size:14px">直接跟 AI 組織討論 <span class="en">Talk to the org</span></h3>
+        <div style="font-size:11.5px;color:var(--muted);margin-top:2px">CEO-orchestrator 會召集相關角色，給你一頁式回應</div>
+      </div>
+      <div style="margin-left:auto"><a href="discuss.html" class="btn ghost">開啟完整討論室 →</a></div>
+    </div>
+    <textarea id="ideate-input" placeholder="例：我想做一個讓使用者匯出資料成 CSV 的功能..."></textarea>
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+      <div class="quick-chips">
+        <span class="chip" onclick="fillIdeate('我想做一個新功能：')">💡 發想新功能</span>
+        <span class="chip" onclick="fillIdeate('看看競品怎麼做：')">🔍 競品研究</span>
+        <span class="chip" onclick="fillIdeate('現在所有任務進度怎樣？')">🚦 看進度</span>
+        <span class="chip" onclick="fillIdeate('以後所有功能都要支援：')">📜 修憲</span>
+      </div>
+      <button class="btn boss" onclick="sendIdeate()">送出 → Convene</button>
+    </div>
+  </div>
+</div>
+
+<script src="shared.js"></script>
+<script>
+  function approveItem(id, msg) {
+    const el = document.querySelector(`.approval-item[data-id="${id}"]`);
+    if (!el) return;
+    el.classList.add('removing');
+    setTimeout(() => { el.remove(); updateCount(); showToast('✅', msg); }, 400);
+  }
+  function rejectItem(id) {
+    const el = document.querySelector(`.approval-item[data-id="${id}"]`);
+    if (!el) return;
+    el.classList.add('removing');
+    setTimeout(() => { el.remove(); updateCount(); showToast('🔄', '已退回，已通知 Planner 重做'); }, 400);
+  }
+  function updateCount() {
+    const remaining = document.querySelectorAll('.approval-item').length;
+    document.getElementById('pending-badge').textContent = remaining;
+    if (remaining === 0) {
+      document.getElementById('approvals-empty').style.display = 'block';
+      document.getElementById('pending-badge').classList.add('ok');
+    }
+  }
+  function fillIdeate(text) {
+    const input = document.getElementById('ideate-input');
+    input.value = text; input.focus();
+    input.setSelectionRange(input.value.length, input.value.length);
+  }
+  function sendIdeate() {
+    const v = document.getElementById('ideate-input').value.trim();
+    if (!v) return showToast('⚠️','請先輸入內容', true);
+    showToast('🎯','CEO-orchestrator 已收到，正在召集相關角色...');
+    setTimeout(() => location.href = 'discuss.html', 800);
+  }
+  document.getElementById('ideate-input').addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') sendIdeate();
+  });
+  setInterval(() => {
+    document.querySelectorAll('.kanban-card .bar').forEach(b => {
+      const w = parseInt(b.style.width);
+      if (w < 95) b.style.width = Math.min(95, w + Math.random()*2) + '%';
+    });
+  }, 4000);
+</script>
+</body>
+</html>
