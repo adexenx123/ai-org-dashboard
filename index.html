@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <title>AI_ORG · 儀表板 (Dashboard)</title>
 <link rel="stylesheet" href="styles.css">
+<script src="shared.js" defer></script>
+<script src="dashboard-api.js" defer></script>
 <style>
   .approval-item {
     background: var(--panel-2);
@@ -367,7 +369,6 @@
   </div>
 </div>
 
-<script src="shared.js"></script>
 <script>
   function approveItem(id, msg) {
     const el = document.querySelector(`.approval-item[data-id="${id}"]`);
@@ -384,6 +385,10 @@
   function updateCount() {
     const remaining = document.querySelectorAll('.approval-item').length;
     document.getElementById('pending-badge').textContent = remaining;
+    const topbarCount = document.querySelector('.topbar .stat .boss');
+    if (topbarCount) topbarCount.textContent = remaining;
+    const heroDate = document.querySelector('.hero .date');
+    if (heroDate) heroDate.textContent = `2026-05-20 週三 · 09:14 AM · 共 ${remaining} 件待你決定`;
     if (remaining === 0) {
       document.getElementById('approvals-empty').style.display = 'block';
       document.getElementById('pending-badge').classList.add('ok');
@@ -409,6 +414,140 @@
       if (w < 95) b.style.width = Math.min(95, w + Math.random()*2) + '%';
     });
   }, 4000);
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const approvalsEl = document.getElementById('approvals');
+    const emptyEl = document.getElementById('approvals-empty');
+    const pendingBadge = document.getElementById('pending-badge');
+    const agentsGrid = document.querySelector('.agents');
+    const agentCount = document.querySelector('.agents')?.closest('.card')?.querySelector('.count.ok');
+
+    function createText(tag, className, text) {
+      const el = document.createElement(tag);
+      if (className) el.className = className;
+      el.textContent = text || '';
+      return el;
+    }
+
+    function getTaskId(task) {
+      return task.task_id || task.id || task.slug || '';
+    }
+
+    function updateApprovalCounter(count) {
+      if (pendingBadge) {
+        pendingBadge.textContent = count;
+        pendingBadge.classList.toggle('ok', count === 0);
+      }
+
+      const topbarCount = document.querySelector('.topbar .stat .boss');
+      if (topbarCount) topbarCount.textContent = count;
+
+      const heroDate = document.querySelector('.hero .date');
+      if (heroDate) {
+        heroDate.textContent = `2026-05-20 週三 · 09:14 AM · 共 ${count} 件待你決定`;
+      }
+    }
+
+    function renderApprovals(list) {
+      if (!approvalsEl || !emptyEl) return;
+      approvalsEl.replaceChildren();
+      emptyEl.style.display = list.length ? 'none' : 'block';
+      updateApprovalCounter(list.length);
+
+      list.forEach(task => {
+        const id = getTaskId(task);
+        const item = document.createElement('div');
+        item.className = 'approval-item';
+        item.dataset.id = id;
+
+        item.appendChild(createText('div', 'title', task.title || id || '未命名任務'));
+
+        const meta = document.createElement('div');
+        meta.className = 'meta';
+        const status = createText('span', 'badge spec', 'SPEC');
+        meta.appendChild(status);
+        meta.appendChild(createText('span', '', `由 ${task.executor || task.role || 'unknown'} 執行`));
+        meta.appendChild(createText('span', 'badge risk', `風險 ${task.risk_tier || 'daily'}`));
+        meta.appendChild(createText('span', 'badge muted', id));
+        item.appendChild(meta);
+
+        item.appendChild(createText('div', 'desc', task.summary || task.description || '等待你批准後繼續執行。'));
+
+        const actions = document.createElement('div');
+        actions.className = 'actions';
+
+        const approve = createText('button', 'btn primary', '批准');
+        approve.type = 'button';
+        approve.addEventListener('click', () => submitTaskDecision(id, 'approve'));
+
+        const reject = createText('button', 'btn danger', '退回');
+        reject.type = 'button';
+        reject.addEventListener('click', () => submitTaskDecision(id, 'reject'));
+
+        actions.append(approve, reject);
+        item.appendChild(actions);
+        approvalsEl.appendChild(item);
+      });
+    }
+
+    function renderAgents(roles) {
+      if (!agentsGrid || !roles) return;
+      const entries = Array.isArray(roles) ? roles : Object.entries(roles);
+      agentsGrid.replaceChildren();
+
+      entries.forEach(entry => {
+        const role = Array.isArray(entry) ? entry[0] : entry.name;
+        const config = Array.isArray(entry) ? entry[1] : entry;
+        const name = config.name || role;
+        const engine = config.engine || config.model || config.runtime || 'ready';
+
+        const item = document.createElement('div');
+        item.className = 'agent active';
+        item.appendChild(createText('div', 'icon', config.icon || '🤖'));
+
+        const body = document.createElement('div');
+        body.className = 'body';
+        const nameEl = createText('div', 'name', name);
+        nameEl.appendChild(createText('span', 'status-dot', ''));
+        body.appendChild(nameEl);
+        body.appendChild(createText('div', 'status', engine));
+
+        item.appendChild(body);
+        agentsGrid.appendChild(item);
+      });
+
+      if (agentCount) agentCount.textContent = `${entries.length} active`;
+    }
+
+    async function submitTaskDecision(id, action) {
+      if (!id) return;
+      try {
+        const response = await fetch(`${window.API_BASE}/tasks/${encodeURIComponent(id)}/${action}`, {
+          method: 'POST',
+          headers: { Accept: 'application/json' },
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        if (action === 'approve') {
+          approveItem(id, '已批准任務');
+        } else {
+          rejectItem(id);
+        }
+      } catch (error) {
+        console.warn(`[dashboard] ${action} failed`, error);
+        showToast('⚠️', '任務狀態更新失敗，請稍後再試', true);
+      }
+    }
+
+    window.approveDashboardTask = id => submitTaskDecision(id, 'approve');
+    window.rejectDashboardTask = id => submitTaskDecision(id, 'reject');
+
+    if (typeof pollDashboard === 'function') {
+      pollDashboard(5000, ({ approvals, agents }) => {
+        renderApprovals(approvals);
+        renderAgents(agents.roles || agents);
+      });
+    }
+  });
 </script>
 </body>
 </html>
