@@ -121,7 +121,183 @@
   </div>
 
   <div class="agent-grid">
-    <div class="agent-loading" style="padding:30px;color:var(--muted);text-align:center;font-size:13px">載入 AI 員工名冊中...</div>
+
+    <!-- Orchestrator -->
+    <div class="agent-profile active">
+      <span class="badge-corner">● ACTIVE</span>
+      <div class="agent-ava orch">🎯</div>
+      <div class="agent-info">
+        <h3>CEO-orchestrator</h3>
+        <div class="role">總協調 · Claude Opus 4.7</div>
+        <div class="desc">公司大腦。接收老闆需求 → 召集相關角色開會 → 摘要 → 輸出決策。所有 multi-agent 討論都從這裡開始。</div>
+        <div class="agent-current active">🔥 進行中：主持「訂閱方案設計」討論（5 角色）</div>
+        <div class="agent-tools">
+          <span class="tool-tag">spawn_agent</span>
+          <span class="tool-tag">summarize</span>
+          <span class="tool-tag">route_decision</span>
+        </div>
+        <div class="agent-stats">
+          <div class="agent-stat">本月工時<b>72 hr</b></div>
+          <div class="agent-stat">主持討論<b>34 次</b></div>
+          <div class="agent-stat">成本<b>$11.20</b></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Planner -->
+    <div class="agent-profile active">
+      <span class="badge-corner">● ACTIVE</span>
+      <div class="agent-ava planner">🔍</div>
+      <div class="agent-info">
+        <h3>Planner</h3>
+        <div class="role">規劃師 · Claude Opus 4.7</div>
+        <div class="desc">把模糊需求拆成可執行 task spec。產出含子任務、預估時間、依賴關係、驗收條件。是老闆批准 Spec 的內容來源。</div>
+        <div class="agent-current active">🔥 進行中：拆「通知系統重構」（已 40%）</div>
+        <div class="agent-tools">
+          <span class="tool-tag">decompose</span>
+          <span class="tool-tag">estimate</span>
+          <span class="tool-tag">dependency_graph</span>
+        </div>
+        <div class="agent-stats">
+          <div class="agent-stat">產出 spec<b>89</b></div>
+          <div class="agent-stat">準確率<b>87%</b></div>
+          <div class="agent-stat">成本<b>$8.40</b></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Frontend (Codex) -->
+    <div class="agent-profile active">
+      <span class="badge-corner">● ACTIVE</span>
+      <div class="agent-ava fe">⌨️</div>
+      <div class="agent-info">
+        <h3>Frontend</h3>
+        <div class="role">前端工程師 · Codex (GPT-5.5)</div>
+        <div class="desc">寫 React / Next.js / shadcn 元件、CSS、互動邏輯。可呼叫瀏覽器 MCP 自動驗證 UI。</div>
+        <div class="agent-current active">🔥 進行中：Dashboard 卡片元件（已 72%）</div>
+        <div class="agent-tools">
+          <span class="tool-tag">codex_exec</span>
+          <span class="tool-tag">browser_test</span>
+          <span class="tool-tag">shadcn_mcp</span>
+        </div>
+        <div class="agent-stats">
+          <div class="agent-stat">commits<b>142</b></div>
+          <div class="agent-stat">+/- 行<b>+5.2k/-1.8k</b></div>
+          <div class="agent-stat">成本<b>$9.10</b></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Backend (Codex) -->
+    <div class="agent-profile active">
+      <span class="badge-corner">● ACTIVE</span>
+      <div class="agent-ava be">🔧</div>
+      <div class="agent-info">
+        <h3>Backend</h3>
+        <div class="role">後端工程師 · Codex (GPT-5.5)</div>
+        <div class="desc">寫 FastAPI / Postgres / API 邏輯。處理 schema 變更、auth、商業邏輯。會自動跑 unit test。</div>
+        <div class="agent-current active">🔥 進行中：REST API auth middleware（已 55%）</div>
+        <div class="agent-tools">
+          <span class="tool-tag">codex_exec</span>
+          <span class="tool-tag">pg_query</span>
+          <span class="tool-tag">openapi_gen</span>
+        </div>
+        <div class="agent-stats">
+          <div class="agent-stat">commits<b>98</b></div>
+          <div class="agent-stat">+/- 行<b>+3.8k/-0.9k</b></div>
+          <div class="agent-stat">成本<b>$8.70</b></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- QA -->
+    <div class="agent-profile active">
+      <span class="badge-corner">● ACTIVE</span>
+      <div class="agent-ava qa">🧪</div>
+      <div class="agent-info">
+        <h3>QA</h3>
+        <div class="role">品質工程師 · Claude Sonnet 4.6</div>
+        <div class="desc">寫測試、跑 E2E (Playwright)、a11y 檢查、效能測試。在 ship 前最後一道驗證。</div>
+        <div class="agent-current active">🔥 進行中：登入頁面 E2E（Playwright 8/15）</div>
+        <div class="agent-tools">
+          <span class="tool-tag">playwright</span>
+          <span class="tool-tag">lighthouse</span>
+          <span class="tool-tag">axe_a11y</span>
+        </div>
+        <div class="agent-stats">
+          <div class="agent-stat">測試套<b>312</b></div>
+          <div class="agent-stat">攔下 bug<b>23</b></div>
+          <div class="agent-stat">成本<b>$5.80</b></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Constitution Keeper -->
+    <div class="agent-profile active">
+      <span class="badge-corner">● ACTIVE</span>
+      <div class="agent-ava const">🛡️</div>
+      <div class="agent-info">
+        <h3>Constitution-keeper</h3>
+        <div class="role">憲法守護者 · Claude Opus 4.7</div>
+        <div class="desc">所有 diff 都要過他。檢查是否違反 12 條文。發現違規 → fail-closed，退回給 Codex 重做。版本指紋管理。</div>
+        <div class="agent-current active">🔥 守衛中：監聽所有 diff，今日已過 14 件</div>
+        <div class="agent-tools">
+          <span class="tool-tag">diff_gate</span>
+          <span class="tool-tag">fingerprint</span>
+          <span class="tool-tag">drift_detect</span>
+        </div>
+        <div class="agent-stats">
+          <div class="agent-stat">攔下違規<b>7</b></div>
+          <div class="agent-stat">通過率<b>94%</b></div>
+          <div class="agent-stat">成本<b>$3.20</b></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Task -->
+    <div class="agent-profile idle">
+      <span class="badge-corner">○ IDLE</span>
+      <div class="agent-ava task">📋</div>
+      <div class="agent-info">
+        <h3>Task</h3>
+        <div class="role">任務管理員 · Claude Haiku 4.5</div>
+        <div class="desc">輕量級任務追蹤、進度報告、提醒。處理小任務（文件、changelog、release notes）。Haiku 模型省成本。</div>
+        <div class="agent-current">💤 閒置 · 上次活動：09:02（產出今日報告）</div>
+        <div class="agent-tools">
+          <span class="tool-tag">git_log</span>
+          <span class="tool-tag">changelog_gen</span>
+          <span class="tool-tag">reminder</span>
+        </div>
+        <div class="agent-stats">
+          <div class="agent-stat">處理任務<b>156</b></div>
+          <div class="agent-stat">產出文件<b>34</b></div>
+          <div class="agent-stat">成本<b>$1.10</b></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Assistant -->
+    <div class="agent-profile idle">
+      <span class="badge-corner">○ IDLE</span>
+      <div class="agent-ava asst">💬</div>
+      <div class="agent-info">
+        <h3>Assistant</h3>
+        <div class="role">通用助手 · Claude Haiku 4.5</div>
+        <div class="desc">補位用。當其他 agent 處理不來，或需要做雜務（搜資料、整理 memo），由他接手。</div>
+        <div class="agent-current">💤 閒置 · 上次活動：昨天 16:48</div>
+        <div class="agent-tools">
+          <span class="tool-tag">web_search</span>
+          <span class="tool-tag">memo</span>
+          <span class="tool-tag">fallback</span>
+        </div>
+        <div class="agent-stats">
+          <div class="agent-stat">處理工作<b>28</b></div>
+          <div class="agent-stat">轉介<b>12</b></div>
+          <div class="agent-stat">成本<b>$0.70</b></div>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <!-- Bottom: how to manage them -->
@@ -262,11 +438,6 @@
         renderAgents(await response.json());
       } catch (error) {
         console.warn('[agents] fetch failed', error);
-        const now = Date.now();
-        if (typeof showToast === 'function' && now - lastErrorToastAt > 30000) {
-          lastErrorToastAt = now;
-          showToast('⚠️', '無法取得 AI 員工名冊，等候連線中...', true);
-        }
       }
     }
 

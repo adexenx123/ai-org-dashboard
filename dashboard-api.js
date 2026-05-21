@@ -14,11 +14,6 @@ function dashboardUrl(path) {
 
 function notifyDashboardFetchError(error) {
   console.warn("[dashboard-api] fetch failed", error);
-  const now = Date.now();
-  if (typeof showToast === "function" && now - lastErrorToastAt > 30000) {
-    lastErrorToastAt = now;
-    showToast("⚠️", "無法連到 AI_ORG API，暫時保留示範資料", true);
-  }
 }
 
 async function readJson(path, label) {

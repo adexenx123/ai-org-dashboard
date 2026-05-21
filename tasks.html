@@ -99,12 +99,112 @@
 
       <div class="card">
         <div class="card-head">
-          <h3>所有任務 <span class="en">All Tasks</span> <span class="count">0</span></h3>
+          <h3>所有任務 <span class="en">All Tasks</span> <span class="count">13</span></h3>
         </div>
 
         <div id="task-list">
-          <div class="task-empty" style="padding:30px;text-align:center;color:var(--muted);font-size:13px">尚無任務。從 terminal 派一個試試:<code style="display:block;margin-top:8px;font-size:11px">curl -X POST http://127.0.0.1:8080/task -H "Content-Type: application/json" -d '{"spec":"..."}'</code></div>
-        
+          <div class="task-row urgent" data-type="urgent" data-search="匯出 pdf export planner">
+            <div class="top">
+              <div><span class="badge spec">SPEC</span> <span class="title">匯出 PDF 按鈕</span></div>
+              <div><a class="btn primary" href="index.html">去批准 →</a></div>
+            </div>
+            <div class="meta">🧠 Planner · ⏱️ 4hr · 💸 $1.20 · 等你 18 分鐘</div>
+          </div>
+          <div class="task-row urgent" data-type="urgent" data-search="訂閱方案 pricing">
+            <div class="top">
+              <div><span class="badge spec">SPEC</span> <span class="title">訂閱方案頁面 MVP</span></div>
+              <div><a class="btn primary" href="index.html">去批准 →</a></div>
+            </div>
+            <div class="meta">🧠 Planner · ⏱️ 8hr · 💸 $3.50 · <span class="badge risk">GDPR 風險</span></div>
+          </div>
+          <div class="task-row shipping" data-type="shipping" data-search="暗色 dark mode">
+            <div class="top">
+              <div><span class="badge ship">SHIP</span> <span class="title">暗色模式切換</span></div>
+              <div><a class="btn primary" href="index.html">去批准 →</a></div>
+            </div>
+            <div class="meta">⌨️ Codex · <span class="badge test">12/12 通過</span> · 🧠 Claude review ✓ · +127/-23 行</div>
+          </div>
+          <div class="task-row shipping" data-type="shipping" data-search="webhook 通知">
+            <div class="top">
+              <div><span class="badge ship">SHIP</span> <span class="title">Webhook 通知整合</span></div>
+              <div><a class="btn primary" href="index.html">去批准 →</a></div>
+            </div>
+            <div class="meta">⌨️ Codex · <span class="badge test">18/18 通過</span> · 🧠 Claude review ✓ · +302/-8 行</div>
+          </div>
+
+          <div class="task-row running" data-type="running" data-search="通知 系統 重構 planner">
+            <div class="top">
+              <div><span class="badge muted">PLAN</span> <span class="title">通知系統重構</span></div>
+              <div class="progress-mini">40% <div class="bar"><div class="fill" style="width:40%"></div></div></div>
+            </div>
+            <div class="meta">🧠 Planner · 預估 11:30 完成 · 已跑 22 分</div>
+          </div>
+          <div class="task-row running" data-type="running" data-search="dashboard 卡片 frontend">
+            <div class="top">
+              <div><span class="badge muted">CODE</span> <span class="title">Dashboard 卡片元件</span></div>
+              <div class="progress-mini">72% <div class="bar"><div class="fill" style="width:72%"></div></div></div>
+            </div>
+            <div class="meta">⌨️ Codex (frontend) · 18 分 · React + shadcn</div>
+          </div>
+          <div class="task-row running" data-type="running" data-search="auth middleware backend">
+            <div class="top">
+              <div><span class="badge muted">CODE</span> <span class="title">REST API auth middleware</span></div>
+              <div class="progress-mini">55% <div class="bar"><div class="fill" style="width:55%"></div></div></div>
+            </div>
+            <div class="meta">⌨️ Codex (backend) · 32 分 · FastAPI + JWT</div>
+          </div>
+          <div class="task-row running" data-type="running" data-search="i18n 西班牙 spanish">
+            <div class="top">
+              <div><span class="badge muted">CODE</span> <span class="title">i18n 西班牙文翻譯</span></div>
+              <div class="progress-mini">18% <div class="bar"><div class="fill" style="width:18%"></div></div></div>
+            </div>
+            <div class="meta">⌨️ Codex · 4 分 · 共 142 字串</div>
+          </div>
+          <div class="task-row running" data-type="running" data-search="登入 e2e qa playwright">
+            <div class="top">
+              <div><span class="badge muted">QA</span> <span class="title">登入頁面 E2E 測試</span></div>
+              <div class="progress-mini">53% <div class="bar"><div class="fill" style="width:53%"></div></div></div>
+            </div>
+            <div class="meta">🧪 QA · Playwright 8/15 · 全瀏覽器 + 行動裝置</div>
+          </div>
+
+          <div class="task-row blocked" data-type="blocked" data-search="email 通知 信件">
+            <div class="top">
+              <div><span class="badge risk">BLOCKED</span> <span class="title">Email 通知模板</span></div>
+              <div><button class="btn primary" onclick="showToast('🛠️','已開啟解阻 modal')">回覆 →</button></div>
+            </div>
+            <div class="meta">🤔 等你回覆：要用 SendGrid 還是 AWS SES？卡 1 小時 22 分</div>
+          </div>
+
+          <div class="task-row queue" data-type="queue" data-search="付款 stripe">
+            <div class="top">
+              <div><span class="badge muted">QUEUE</span> <span class="title">Stripe 付款整合</span></div>
+              <div style="color:var(--dim);font-size:11.5px">13:00 開始</div>
+            </div>
+            <div class="meta">⌨️ Codex 待命 · 估 6hr · 等暗色模式 ship 後啟動</div>
+          </div>
+          <div class="task-row queue" data-type="queue" data-search="行動裝置 mobile responsive">
+            <div class="top">
+              <div><span class="badge muted">QUEUE</span> <span class="title">行動裝置響應式優化</span></div>
+              <div style="color:var(--dim);font-size:11.5px">14:30 開始</div>
+            </div>
+            <div class="meta">⌨️ Codex 待命 · 估 4hr</div>
+          </div>
+          <div class="task-row queue" data-type="queue" data-search="api 文件 docs">
+            <div class="top">
+              <div><span class="badge muted">QUEUE</span> <span class="title">API 文件自動生成</span></div>
+              <div style="color:var(--dim);font-size:11.5px">明天 09:00</div>
+            </div>
+            <div class="meta">📋 Task · 估 2hr · OpenAPI 規範</div>
+          </div>
+          <div class="task-row queue" data-type="queue" data-search="效能 監控 monitoring">
+            <div class="top">
+              <div><span class="badge muted">QUEUE</span> <span class="title">效能監控儀表板</span></div>
+              <div style="color:var(--dim);font-size:11.5px">本週五</div>
+            </div>
+            <div class="meta">📋 Task · 估 8hr · Grafana + Prometheus</div>
+          </div>
+        </div>
       </div>
 
       <!-- Gantt -->

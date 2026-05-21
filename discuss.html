@@ -231,8 +231,147 @@
       </div>
 
       <div class="chat-messages" id="chat">
-        <div class="chat-empty" style="padding:40px;text-align:center;color:var(--muted);font-size:13px">尚無對話。送出訊息開始 claude -p SSE 真實對話。</div>
-      
+        <div class="msg user">
+          <div class="ava">J</div>
+          <div class="msg-body">
+            <div class="msg-name">你 (CEO) · 08:42</div>
+            <div class="msg-bubble">我想做一個訂閱方案頁面，三方案，要能線上付款。預算？風險？</div>
+          </div>
+        </div>
+
+        <div class="msg orch">
+          <div class="ava">🎯</div>
+          <div class="msg-body">
+            <div class="msg-name">CEO-orchestrator · 08:42</div>
+            <div class="msg-bubble">
+              收到。已召集 5 個角色平行分析：<br>
+              🔍 Planner（拆需求） · 📐 Architect（技術選型） · 🛡️ Constitution-keeper（合規） · 🧪 QA（驗收標準） · 📊 Market-research（競品）<br>
+              <span style="color:var(--muted);font-size:12px">預計 90 秒內回覆。</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="msg planner">
+          <div class="ava">🔍</div>
+          <div class="msg-body">
+            <div class="msg-name">Planner · 08:43</div>
+            <div class="msg-bubble">
+              <h4>拆解結果</h4>
+              5 個 task：① 方案資料模型 ② 比較表 UI ③ Stripe Checkout ④ Webhook 處理 ⑤ 收據 email<br>
+              <b>預估總時間</b>：8 小時（最快今天結束 ship）<br>
+              <b>關鍵路徑</b>：① → ③（其他可平行）
+            </div>
+          </div>
+        </div>
+
+        <div class="msg arch">
+          <div class="ava">📐</div>
+          <div class="msg-body">
+            <div class="msg-name">Architect · 08:43</div>
+            <div class="msg-bubble">
+              <h4>技術選型</h4>
+              用現有 <code>Next.js</code> + <code>Stripe Checkout</code>（不自己接 Stripe Elements，能省 5hr）。<br>
+              無需新表，加 3 個欄位到 users 表即可。<br>
+              <b>風險</b>：低。Stripe SDK 已在 package.json，過去 i18n 串接時順手裝的。
+            </div>
+          </div>
+        </div>
+
+        <div class="msg const">
+          <div class="ava">🛡️</div>
+          <div class="msg-body">
+            <div class="msg-name">Constitution-keeper · 08:43</div>
+            <div class="msg-bubble">
+              <h4>⚠️ 合規檢查</h4>
+              觸發憲法 §11（外部 API）+ §9（倫理 / 隱私）：<br>
+              <ul>
+                <li>❌ GDPR：付款資料儲存說明缺失</li>
+                <li>❌ Cookie 同意：尚未實作</li>
+                <li>✅ Stripe 本身合規（PCI DSS Level 1）</li>
+              </ul>
+              <b>建議</b>：v1 MVP 跳過 GDPR（標記 risk-accepted），v2 補齊。或先做 v0 但僅限內測。
+            </div>
+          </div>
+        </div>
+
+        <div class="msg qa">
+          <div class="ava">🧪</div>
+          <div class="msg-body">
+            <div class="msg-name">QA · 08:44</div>
+            <div class="msg-bubble">
+              <h4>驗收標準</h4>
+              <ul>
+                <li>三方案切換動畫流暢（&lt;100ms）</li>
+                <li>3 種視窗大小（手機/平板/桌面）+ 暗色模式</li>
+                <li>付款 happy path E2E + 取消 + 退款</li>
+                <li>a11y：鍵盤可導航、螢幕閱讀器</li>
+                <li>i18n：4 種語言（已就緒）</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="msg market">
+          <div class="ava">📊</div>
+          <div class="msg-body">
+            <div class="msg-name">Market-research · 08:44</div>
+            <div class="msg-bubble">
+              <h4>競品速覽</h4>
+              <ul>
+                <li><b>Linear</b>：Free / Standard $8 / Plus $14 — 強調功能差異表</li>
+                <li><b>Notion</b>：Free / Plus $10 / Business $18 — 用滑桿選團隊人數</li>
+                <li><b>Stripe 自己的訂閱頁</b>：4 方案、強調「Most Popular」標記</li>
+              </ul>
+              建議我們採 Linear 模式（最簡潔），定價 Free / $9 / $19。
+            </div>
+          </div>
+        </div>
+
+        <div class="msg orch summary">
+          <div class="ava">🎯</div>
+          <div class="msg-body">
+            <div class="msg-name">CEO-orchestrator · 摘要 · 08:45</div>
+            <div class="msg-bubble">
+              <h4>📋 一頁式摘要</h4>
+              <b>做法</b>：Next.js + Stripe Checkout，5 task，8 小時。<br>
+              <b>定價建議</b>：Free / $9 Pro / $19 Team（Linear 風格）。<br>
+              <b>風險</b>：GDPR 條款 + Cookie 同意未實作。<br>
+              <b>三個選項給你：</b>
+              <div class="decision-card">
+                <div class="label">選項 A · 推薦</div>
+                <div class="value">先做 MVP（接受 GDPR 風險），v2 補齊 → 今天就能 ship</div>
+              </div>
+              <div class="decision-card" style="background:linear-gradient(135deg,rgba(251,191,36,0.08),rgba(251,146,60,0.05));border-color:#78350f">
+                <div class="label" style="color:var(--warn)">選項 B · 保守</div>
+                <div class="value">先補 GDPR + Cookie（+6hr），明天再 ship</div>
+              </div>
+              <div class="decision-card" style="background:linear-gradient(135deg,rgba(167,139,250,0.08),rgba(167,139,250,0.05));border-color:#4c1d95">
+                <div class="label" style="color:var(--accent-2)">選項 C · 修憲</div>
+                <div class="value">把「所有外部金流必須先過 GDPR」寫進憲法，未來自動擋下</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="msg user">
+          <div class="ava">J</div>
+          <div class="msg-body">
+            <div class="msg-name">你 (CEO) · 08:48</div>
+            <div class="msg-bubble">選 A，但 task spec 加一個 v2 backlog item「補 GDPR」</div>
+          </div>
+        </div>
+
+        <div class="msg orch">
+          <div class="ava">🎯</div>
+          <div class="msg-body">
+            <div class="msg-name">CEO-orchestrator · 08:48</div>
+            <div class="msg-bubble">
+              ✅ 已記錄決策。Planner 正在產生 task spec 草稿，預計 90 秒後送到批准 inbox。<br>
+              已建立 v2 backlog item <code>BL-204: 訂閱方案 GDPR 補齊</code>。
+            </div>
+          </div>
+        </div>
+      </div>
 
       <div class="chat-input-box">
         <textarea id="msg-input" placeholder="繼續討論或丟新問題..." rows="2"></textarea>

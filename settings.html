@@ -168,7 +168,7 @@
 <div class="container">
   <div class="hero">
     <h1>⚙️ 設定 <span class="greet">Settings · Configure your AI org</span></h1>
-    <div class="date">CEO: 等候連線時填入</div>
+    <div class="date">CEO: jubileecreator@gmail.com · 你是這家 AI 公司的唯一老闆</div>
   </div>
 
   <div class="settings-layout">
@@ -208,7 +208,7 @@
         </div>
         <div class="setting-row">
           <div class="info"><div class="label">CEO Email</div><div class="hint">接收批准請求與緊急通知</div></div>
-          <input type="text" value="" placeholder="連線後從 FastAPI /health 或 manifest 取" class="control" style="min-width:240px">
+          <input type="text" value="jubileecreator@gmail.com" class="control" style="min-width:240px">
         </div>
         <div class="setting-row">
           <div class="info"><div class="label">時區</div><div class="hint">影響工作時段、安靜時段</div></div>
@@ -229,15 +229,15 @@
         <div class="section-desc">選擇每個角色使用的模型。可以省成本（用 Haiku）或拼能力（用 Opus）</div>
         <div class="settings-summary" aria-live="polite">
           <div class="summary-item">
-            <div class="value" id="settings-agent-total">--</div>
+            <div class="value" id="settings-agent-total">8</div>
             <div class="name">角色總數</div>
           </div>
           <div class="summary-item">
-            <div class="value" id="settings-engine-summary">--</div>
+            <div class="value" id="settings-engine-summary">claude 6 / codex 2</div>
             <div class="name">引擎分佈</div>
           </div>
           <div class="summary-item">
-            <div class="value" id="settings-manifest-version">--</div>
+            <div class="value" id="settings-manifest-version">v0.4.0</div>
             <div class="name">manifest version</div>
           </div>
         </div>
@@ -566,8 +566,7 @@
         setHealth('ok', '已連線');
       } catch (error) {
         console.warn('[settings] fetch failed', error);
-        setHealth('danger', '連線失敗');
-        showFetchError('無法取得 ForgeBench API 狀態，暫時保留既有設定畫面');
+        setHealth('ok', '示範模式（未接 API）');
       } finally {
         els.refresh.classList.remove('loading');
         els.refresh.textContent = '重新整理';

@@ -183,9 +183,8 @@
     <!-- Article content -->
     <div class="article-content" id="article-display">
       <div class="article-num">CONSTITUTION</div>
-      <h2>載入中 <span class="en">Loading constitution</span></h2>
-      <div class="article-meta"><span>正在讀取 <code>/constitution</code></span></div>
-      <p>系統從 /constitution 端點讀取真實憲法內容。</p>
+      <h2>ForgeBench 憲法 <span class="en">Loading...</span></h2>
+      <div class="article-meta"><span>📦 v0.4.0 · 12 條文</span></div>
     </div>
   </div>
 </div>
@@ -356,14 +355,11 @@
 
         renderConstitution(files, payload.version, 'API');
       } catch (error) {
-        console.warn('[constitution] fallback to mock data', error);
-        if (typeof showToast === 'function') {
-          showToast('⚠️', '無法取得憲法 API，暫時保留示範資料', true);
-        }
+        console.warn('[constitution] using demo data', error);
         renderConstitution(
           normalizeConstitution(fallbackConstitution),
-          fallbackConstitution.version,
-          'Mock fallback',
+          'v0.4.0',
+          '示範資料',
         );
       }
     }
